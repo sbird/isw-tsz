@@ -214,7 +214,7 @@ class TSZHalo(object):
         (da)  d/da(D+/a) j_l(k*r). Dimensionless"""
         #Comoving distance to this scale factor.
         zz = 1./aa - 1
-        rr = self.light / self.H0 * self.conformal_time(zz, self.omegam0)
+        rr = self.light / self.H0 * self.conformal_time(zz)
         #d/da (D+/a) = 5/2 omega_M / (H^2 a^4) + D+ /a ( H'/H - 1 /a)
         #Zero if H  = omega_M a^-3/2, D+ ~ a as H'/H ~ -3/2 / a
         H2 = hzoverh0(aa, self.omegam0)**2
@@ -258,7 +258,7 @@ class TSZHalo(object):
         zz = 1./aa - 1
         #Mpc ^-1
         Tmass = self.tsz_mass_integral(zz, kk) * self.hubble
-        rr = self.light / self.H0 * self.conformal_time(zz, self.omegam0)
+        rr = self.light / self.H0 * self.conformal_time(zz)
         Dplus = self.lingrowthfac(zz)
         return aa**(-2) * Tmass * Dplus * scipy.special.sph_jn(l, kk * rr) / hzoverh0(aa, self.omegam0)
 
@@ -282,7 +282,7 @@ class TSZHalo(object):
     def _crosscorr_integrand(self, aa, ll, func1, func2):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
         zz = 1./aa - 1
-        rr = self.light / self.H0 * self.conformal_time(zz, self.omegam0)
+        rr = self.light / self.H0 * self.conformal_time(zz)
         #This is the Limber approximation
         kk = (ll + 1/2) / rr
         return func1(aa, kk) * func2(aa,kk) / rr**2 * self.overden.PofK(kk)
@@ -292,5 +292,5 @@ class TSZHalo(object):
         (cll, err) = scipy.integrate.quad(self._crosscorr_integrand, 0.333, 1, (ll, func1, func2))
         if err / (cll+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
-        return cll
+        return (ll*(ll+1))/2/math.pi*cll
 
