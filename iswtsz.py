@@ -143,18 +143,16 @@ class TSZHalo(object):
         conc = self.concentration(mass,zz)
         return self.R200(mass)/conc
 
-    def tsz_per_halo(self, M, zz, l):
+    def tsz_per_halo(self, M, zz,kk):
         """The 2D fourier transform of the projected Compton y-parameter, per halo.
-        Eq 2 of Komatsu and Seljak 2002.
+        Eq 2 of Komatsu and Seljak 2002, slightly modified to remove some of the dimensionless parameters.
         Units are Mpc/h^2."""
-        conc = self.concentration(M, zz)
-        lbyls = l / self.ll_s(M, zz)
         #Upper limit is the virial radius.
-        integrated,err = scipy.integrate.quad(self._ygas3d_integrand, 0, conc, (lbyls, M,zz))
+        integrated,err = scipy.integrate.quad(self._ygas3d_integrand, 0, self.R200(M), (kk, M,zz))
         if err/integrated > 0.1:
             raise RuntimeError("Err in linear growth: ",err)
-        #Units:                 Mpc                                 Mpc
-        return 4 * math.pi * self.Rs(M, zz) / self.ll_s(M, zz)**2 * integrated
+        #Units:  Mpc*2
+        return 4 * math.pi * integrated
 
     def ll_s(self, M, zz):
         """Comoving angular wavenumber."""
@@ -197,9 +195,9 @@ class TSZHalo(object):
         Pgas0 = rhogas0 / 1e14 * Tgas0 * kboltz/1e3/8
         return Pgas0 * self.ygas(x, conc)**gamma
 
-    def _ygas3d_integrand(self, x, lbyls, mass,zz):
+    def _ygas3d_integrand(self, rr, kk, mass,zz):
         """Integrand of the TSZ profile from Komatsu & Seljak 2002 eq. 2"""
-        return scipy.special.j0(x*lbyls) * self.y3d(x, mass,zz) * x * x
+        return scipy.special.j0(rr*kk) * self.y3d(rr/self.Rs(mass, zz), mass,zz) * rr * rr
 
     def isw_hh_l(self, kk, l):
         """The change in the CMB temperature from the late-time (dark energy) ISW effect.
@@ -231,17 +229,17 @@ class TSZHalo(object):
         bhalo = (1 + (0.707*nu**2 -1)/ delta_c) + 2 * 0.3 * delta_c / (1 + (0.707 * nu**2)**0.3)
         return bhalo
 
-    def tsz_mass_integral(self, zz, ll, mass=(1e12, 1e15)):
+    def tsz_mass_integral(self, zz, kk, mass=(1e12, 1e15)):
         """Formula for the mass integral of the tSZ power, Taburet 2010, 1012.5036.
         Units of h/Mpc"""
-        (integrated, err) = scipy.integrate.quad(self._tsz_mass_integrand, mass[0], mass[1], (zz, ll))
+        (integrated, err) = scipy.integrate.quad(self._tsz_mass_integrand, mass[0], mass[1], (zz, kk))
         if err/(integrated+0.01) > 0.1:
             raise RuntimeError("Err in tsz mass integral: ",err)
         return integrated
 
-    def _tsz_mass_integrand(self, MM, zz, ll):
+    def _tsz_mass_integrand(self, MM, zz, kk):
         """Integrand for the tSZ mass integral. Units of h/Mpc h/Msun"""
-        y3d = self.tsz_per_halo(MM, zz, ll)
+        y3d = self.tsz_per_halo(MM, zz, kk)
         bb = self.bias(MM, zz)
         dndm = self.dndm_z(MM, zz)
         #Units: Mpc/h^2      (Mpc/h)-3
@@ -259,11 +257,40 @@ class TSZHalo(object):
         #Comoving distance to this scale factor.
         zz = 1./aa - 1
         #Mpc ^-1
-        Tmass = self.tsz_mass_integral(zz, l) * self.hubble
+        Tmass = self.tsz_mass_integral(zz, kk) * self.hubble
         rr = self.light / self.H0 * self.conformal_time(zz, self.omegam0)
         Dplus = self.lingrowthfac(zz)
         return aa**(-2) * Tmass * Dplus * scipy.special.sph_jn(l, kk * rr) / hzoverh0(aa, self.omegam0)
 
-class CrossCorr(hm.OverDensities):
-def crosscorr(ll, func1, func2):
-    """Compute the crosscorrelation of two objects"""
+    def tsz_window_function_limber(self, aa, kk):
+        """The window function for the tSZ that appears in the C_l if we use the Limber approximation.
+        This gets rid of the spherical bessels."""
+        zz = 1./aa - 1
+        Tmass = self.tsz_mass_integral(zz, kk) * self.hubble
+        Dplus = self.lingrowthfac(zz)
+        return -2 * self.light / self.H0 * aa**(-2) * Tmass * Dplus / hzoverh0(aa, self.omegam0)
+
+    def isw_window_function_limber(self, aa, kk):
+        """The window function for the ISW that appears in the C_l if we use the Limber approximation."""
+        #d/da (D+/a) = 5/2 omega_M / (H^2 a^4) + D+ /a ( H'/H - 1 /a)
+        #Zero if H  = omega_M a^-3/2, D+ ~ a as H'/H ~ -3/2 / a
+        H2 = hzoverh0(aa, self.omegam0)**2
+        Hprime = 1.5 * self.omegam0 / aa**4 / H2
+        Dplusda = 2.5 * self.omegam0 / (H2* aa**4) - self.lingrowthfac(aa) / aa * ( Hprime + 1/aa)
+        return 3 * self.H0**2 / self.light**2 * self.omegam0 / kk**2 * Dplusda
+
+    def _crosscorr_integrand(self, aa, ll, func1, func2):
+        """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
+        zz = 1./aa - 1
+        rr = self.light / self.H0 * self.conformal_time(zz, self.omegam0)
+        #This is the Limber approximation
+        kk = (ll + 1/2) / rr
+        return func1(aa, kk) * func2(aa,kk) / rr**2 * self.overden.PofK(kk)
+
+    def crosscorr(self, ll, func1, func2):
+        """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
+        (cll, err) = scipy.integrate.quad(self._crosscorr_integrand, 0.333, 1, (ll, func1, func2))
+        if err / (cll+0.01) > 0.1:
+            raise RuntimeError("Err in C_l computation: ",err)
+        return cll
+
