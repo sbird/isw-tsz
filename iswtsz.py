@@ -54,6 +54,8 @@ class TSZHalo(object):
         self.H0 = 100* self.hubble
         #speed of light in km/s
         self.light = 2.99e5
+        #tSZ frequency
+        self.nu = 100.
         self.overden = hm.Overdensities(0,omegam0, omegab0,1-omegam0,hubble, 0.97,sigma8,log_mass_lim=(12,15))
         self._aaa = np.linspace(0.05,1,60)
         self._growths = np.array([self._generate_lingrowthfac(aa) for aa in self._aaa])
@@ -135,7 +137,7 @@ class TSZHalo(object):
         return self.conc_model.concentration(nu, zz)
 
     def R200(self, mass):
-        """Get the virial radius in Mpc/h for a given mass in Msun/h"""
+        """Get the virial radius in comoving Mpc/h for a given mass in Msun/h"""
         rhoc = self.rhocrit(1)
         #in kg
         solarmass = 1.98855e30
@@ -158,8 +160,7 @@ class TSZHalo(object):
 
     def Rs(self, mass, aa):
         """Scale radius of the halo in Mpc/h"""
-        zz = 1./aa-1
-        conc = self.concentration(mass,zz)
+        conc = self.concentration(mass,aa)
         return self.R200(mass)/conc
 
     def tsz_per_halo(self, M, aa,kk):
@@ -167,9 +168,9 @@ class TSZHalo(object):
         Eq 2 of Komatsu and Seljak 2002, slightly modified to remove some of the dimensionless parameters.
         Units are Mpc/h^2."""
         #Upper limit is the virial radius.
-        integrated,err = scipy.integrate.quad(self._ygas3d_integrand, 0, self.R200(M), (kk, M,aa))
-        if err/integrated > 0.1:
-            raise RuntimeError("Err in linear growth: ",err)
+        integrated,err = scipy.integrate.quadrature(self._ygas3d_integrand, 0., self.R200(M), (kk, M,aa))
+#         if err/integrated > 0.1:
+#             raise RuntimeError("Err in linear growth: ",err)
         #Units:  Mpc*2
         return 4 * math.pi * integrated
 
@@ -191,11 +192,8 @@ class TSZHalo(object):
         gamma = self.gamma(conc)
         eta0 = self.eta0(conc)
         BB = 3./eta0 * (gamma - 1)/gamma / (np.log(1+conc)/conc - 1/(1+conc))
-        if x > 1e-10:
-            ll1p = (1- np.log1p(x)/x)
-        else:
-            #Series expansion for small x.
-            ll1p = x/2.
+        #Series expansion for small x.
+        ll1p = (x/2. - x**2/3 + x**3/4 - x**4/5) * (x < 1e-4) + (1-np.log1p(x)/x) * (x > 1e-4)
         return np.power(1 - BB * ll1p, 1./(gamma-1))
 
     def Pgas(self, x, mass, aa):
@@ -203,8 +201,7 @@ class TSZHalo(object):
         Other choices are possible (indeed preferred)!"""
         #Boltzmann constant in eV/K
         kboltz = 8.6173324e-5
-        zz = 1./aa-1
-        conc = self.concentration(mass, zz)
+        conc = self.concentration(mass, aa)
         gamma = self.gamma(conc)
         #In M_sun / Mpc^3, as the constant below.
         #Eq. 21
@@ -218,6 +215,7 @@ class TSZHalo(object):
 
     def _ygas3d_integrand(self, rr, kk, mass,aa):
         """Integrand of the TSZ profile from Komatsu & Seljak 2002 eq. 2"""
+        #The bessel function does little unless k is large.
         return scipy.special.j0(rr*kk) * self.y3d(rr/self.Rs(mass, aa), mass,aa) * rr * rr
 
     def isw_hh_l(self, kk, l):
@@ -250,18 +248,19 @@ class TSZHalo(object):
     def tsz_mass_integral(self, aa, kk, mass=(1e12, 1e15)):
         """Formula for the mass integral of the tSZ power, Taburet 2010, 1012.5036.
         Units of h/Mpc"""
-        (integrated, err) = scipy.integrate.quad(self._tsz_mass_integrand, mass[0], mass[1], (aa, kk))
+        (integrated, err) = scipy.integrate.quad(self._tsz_mass_integrand, np.log(mass[0]), np.log(mass[1]), (aa, kk))
         if err/(integrated+0.01) > 0.1:
             raise RuntimeError("Err in tsz mass integral: ",err)
         return integrated
 
-    def _tsz_mass_integrand(self, MM, aa, kk):
+    def _tsz_mass_integrand(self, logM, aa, kk):
         """Integrand for the tSZ mass integral. Units of h/Mpc h/Msun"""
+        MM = np.exp(logM)
         y3d = self.tsz_per_halo(MM, aa, kk)
         bb = self.bias(MM, aa)
         dndm = self.dndm_z(MM, aa)
         #Units: Mpc/h^2      (Mpc/h)-3
-        return y3d * bb * dndm
+        return MM * y3d * bb * dndm
 
     def tsz_yy_ll(self,kk, l):
         """Window function for the tSZ power spectrum. Eq. 18 of Taburet 2010"""
@@ -304,7 +303,7 @@ class TSZHalo(object):
         """Compute the k-mode value for a given l in the limber approximation."""
         rr = self.light / self.H0 * self.conformal_time(aa)
         #This is the Limber approximation
-        kk = (ll + 1/2) / (rr+1e-6)
+        kk = (ll + 1/2) / (rr+1e-12)
         return kk
 
     def crosscorr(self, ll, func1, func2):
