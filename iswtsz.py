@@ -58,7 +58,7 @@ class TSZHalo(object):
         self.nu = 100.
         self.overden = hm.Overdensities(0,omegam0, omegab0,1-omegam0,hubble, 0.97,sigma8,log_mass_lim=(12,15))
         self._aaa = np.linspace(0.05,1,60)
-        self._growths = np.array([self._generate_lingrowthfac(aa) for aa in self._aaa])
+        self._growths = np.array([self._generate_lingrowthfac(aa)/aa for aa in self._aaa])
         #Normalise to z=0.
         self._lingrowthfac=scipy.interpolate.InterpolatedUnivariateSpline(self._aaa,self._growths)
         self.conc_model = concentration.LudlowConcentration(self.Dofz)
@@ -72,10 +72,11 @@ class TSZHalo(object):
 
     def lingrowthfac(self, aa):
         """Growth function, using the interpolator where we can, otherwise doing it for real."""
-        if aa > self._aaa[0]:
-            growth = self._lingrowthfac(aa)
-        else:
-            growth = self._generate_lingrowthfac(aa)
+        growth = self._lingrowthfac(aa)*aa
+        #if aa > self._aaa[0]:
+            #growth = self._lingrowthfac(aa)*aa
+        #else:
+            #growth = self._generate_lingrowthfac(aa)
         return growth / self._lingrowthfac(1.)
 
     def mass_function(self, sigma):
