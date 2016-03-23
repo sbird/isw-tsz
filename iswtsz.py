@@ -176,7 +176,13 @@ class TSZHalo(object):
 
     def y3d(self, x, mass,aa):
         """Electron pressure profile from K&S 2002 eq 7. Units of 1 / Mpc."""
-        return 1.04e-4 * (55/50.) * self.Pgas(x, mass,aa)
+        #Electron mass in kg
+        me = 9.11e-31
+        #Thompson cross-section in m^2
+        sigmat = 6.6524e-29
+        #Units are s^2 / kg
+        prefac = sigmat / me / (1000*self.light**2)
+        return (2 + 2*0.76)/(3 + 5*0.76) * self.Pgas(x, mass,aa) * prefac
 
     def gamma(self, conc):
         """Polytropic index for a cluster from K&S 02, eq. 17"""
@@ -192,25 +198,43 @@ class TSZHalo(object):
         gamma = self.gamma(conc)
         eta0 = self.eta0(conc)
         BB = 3./eta0 * (gamma - 1)/gamma / (np.log(1+conc)/conc - 1/(1+conc))
-        #Series expansion for small x.
-        ll1p = (x/2. - x**2/3 + x**3/4 - x**4/5) * (x < 1e-4) + (1-np.log1p(x)/x) * (x > 1e-4)
+        #Series expansion for small x
+        if np.size(x) == 1 and np.all(x) < 1e-4:
+            ll1p = (x/2. - x**2/3 + x**3/4 - x**4/5)
+        else:
+            ll1p = (1-np.log1p(x)/x)
         return np.power(1 - BB * ll1p, 1./(gamma-1))
 
+    def rhogas0(self, conc, mass, aa):
+        """Density at halo center."""
+        #In M_sun / Mpc^3, as the constant below.
+        #Eq. 21
+        rhogas0 = (self.omegab0  / self.omegam0) * mass / 4 / math.pi / self.R200(mass)**3 * self.hubble**2
+        rhogas0 *= conc**2 / (np.log(1+conc) - conc/(1+conc)) /((1+conc)**2*self.ygas(conc, conc))
+        return rhogas0
+
     def Pgas(self, x, mass, aa):
-        """Dimensionless part of gas pressure profile, K&S 02 eq 8.
-        Other choices are possible (indeed preferred)!"""
-        #Boltzmann constant in eV/K
-        kboltz = 8.6173324e-5
+        """Gas pressure profile, K&S 02 eq 8.
+        Other choices are possible (indeed preferred)!
+        Units are kg / Mpc /s^2"""
+        #Newtons constant in units of m^3 kg^-1 s^-2
+        gravity = 6.67408e-11
+        #Boltzmann constant in m2 kg s-2 K-1
+        kboltz = 1.38e-23
+        #Solar mass in kg
+        solarmass = 1.98855e30
+        #Proton mass in kg
+        protonmass = 1.6726219e-27
+        #1 Mpc in m
+        Mpc = 3.086e22
         conc = self.concentration(mass, aa)
         gamma = self.gamma(conc)
         #In M_sun / Mpc^3, as the constant below.
         #Eq. 21
-        rhogas0 = 7.96e13 * (self.omegab0 * self.hubble**2 / self.omegam0)
-        rhogas0 *=  (mass / 1e15)/self.R200(mass)**3
-        rhogas0 *= conc**3 / (np.log(1+conc) - conc/(1+conc)) /(conc**2*(1+conc)**2*self.ygas(conc, conc))
-        #Tgas at 0.: eq. 19.
-        Tgas0 = 8.8 * self.eta0(conc) * (mass / 1e15)/self.R200(mass)
-        Pgas0 = rhogas0 / 1e14 * Tgas0 * kboltz/1e3/8
+        rhogas0 = self.rhogas0(conc, mass,aa)
+        # Units                                    m^3 s^-2                      kg                m        K s^2 / m^2 /kg
+        Tgas0 = self.eta0(conc) * 4 / (3+5*0.76) * gravity * protonmass * (mass * solarmass) /3/(self.R200(mass)* Mpc)/kboltz
+        Pgas0 =  (3 + 5 * 0.76) / 4 * rhogas0 * solarmass / (protonmass) * kboltz * Tgas0 / Mpc**2
         return Pgas0 * self.ygas(x, conc)**gamma
 
     def _ygas3d_integrand(self, rr, kk, mass,aa):
@@ -256,7 +280,7 @@ class TSZHalo(object):
     def _tsz_mass_integrand(self, logM, aa, kk):
         """Integrand for the tSZ mass integral. Units of h/Mpc h/Msun"""
         MM = np.exp(logM)
-        y3d = self.tsz_per_halo(MM, aa, kk)
+        y3d = self.tsz_per_halo(MM, aa, kk/aa)
         bb = self.bias(MM, aa)
         dndm = self.dndm_z(MM, aa)
         #Units: Mpc/h^2      (Mpc/h)-3
@@ -290,14 +314,19 @@ class TSZHalo(object):
         #5/2 omega_M / (H^2 a^4) + D+ /a ( H'/H - 1 /a)
         #Zero if H  = omega_M a^-3/2, D+ ~ a as H'/H ~ -3/2 / a
         Dplusda = self.Dplusda(aa)
-        return 3 * self.H0**2 / self.light**2 * self.omegam0 / kk**2 * Dplusda
+        #Units:                 Mpc^-2                          Mpc^2
+        return 3 * self.H0**2 / self.light**2 * self.omegam0 / kk**2 * Dplusda * aa**2
 
     def _crosscorr_integrand(self, aa, ll, func1, func2):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
+        #Units of rr are Mpc.
         rr = self.light / self.H0 * self.conformal_time(aa)
-        #This is the Limber approximation
+        #This is the Limber approximation: 1/Mpc
         kk = (ll + 1/2) / rr
-        return func1(aa, kk) * func2(aa,kk) / rr**2 * self.overden.PofK(kk)
+        #Convert k into h/Mpc and convert the result from (Mpc/h)**3 to Mpc**3
+        PofKMpc = self.overden.PofK(kk/self.hubble) * self.hubble**3
+        #Functions are dimensionless, so this needs to be dimensionless too.
+        return func1(aa, kk) * func2(aa,kk) / rr**2 * PofKMpc * hzoverh0(aa, self.omegam0) * self.H0 / self.light
 
     def kk_limber(self, ll, aa):
         """Compute the k-mode value for a given l in the limber approximation."""
