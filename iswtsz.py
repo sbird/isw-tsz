@@ -12,6 +12,10 @@ def hzoverh0(a, omegam0):
     """ returns: H(a) / H0  = [omegam/a**3 + (1-omegam)]**0.5 """
     return np.sqrt(omegam0/a**3 + (1.-omegam0))
 
+def h2overh0(a, omegam0):
+    """ returns: H^2(a) / H0^2  = [omegam/a**3 + (1-omegam)]"""
+    return omegam0/a**3 + (1.-omegam0)
+
 def _lingrowthintegrand(a,omegam0):
     """ (e.g. eq. 8 in lukic et al. 2008)   returns: da / [a*H(a)/H0]**3 """
     return np.power(a * hzoverh0(a,omegam0),-3)
@@ -64,6 +68,7 @@ class TSZHalo(object):
         self.conc_model = concentration.LudlowConcentration(self.Dofz)
         self._conformal = np.array([conformal_time(aa, omegam0) for aa in self._aaa])
         self.conformal_time = scipy.interpolate.InterpolatedUnivariateSpline(self._aaa,self._conformal)
+        self._rhocrit0 = self.rhocrit(1)
 
     def Dofz(self, zz):
         """Helper"""
@@ -120,26 +125,26 @@ class TSZHalo(object):
 
     def EprimebyE(self, aa):
         """Returns d/da(H/H0) / (H/H0)"""
-        EprimebyE = -1.5 * self.omegam0 / aa**4 / hzoverh0(aa, self.omegam0)**2
+        EprimebyE = -1.5 * self.omegam0 / aa**4 / h2overh0(aa, self.omegam0)
         return EprimebyE
 
     def Dplusda(self, aa):
         """The derivative of the growth function divided by a w.r.t a."""
         #This is d/da(H/H0) / (H/H0)
         #This is d D+/da
-        Dplusda = 2.5 * self.omegam0 / aa**3 / hzoverh0(aa, self.omegam0)**2/self._lingrowthfac(1.)
+        Dplusda = 2.5 * self.omegam0 / aa**3 / h2overh0(aa, self.omegam0)/self._lingrowthfac(1.)
         Dplusda += self.EprimebyE(aa) * self.lingrowthfac(aa)
         return Dplusda/ aa - self.lingrowthfac(aa) /aa**2
 
     def concentration(self,mass, aa):
         """Compute the concentration for a halo mass"""
         zz = 1./aa-1
-        nu = 1.686/self.overden.sigmaof_M(mass)/self.lingrowthfac(aa)
-        return self.conc_model.concentration(nu, zz)
+        nu = 1.686/self.overden.sigmaof_M(mass)#/self.lingrowthfac(aa)
+        return self.conc_model.comoving_concentration(nu, zz)
 
     def R200(self, mass):
         """Get the virial radius in comoving Mpc/h for a given mass in Msun/h"""
-        rhoc = self.rhocrit(1)
+        rhoc = self._rhocrit0
         #in kg
         solarmass = 1.98855e30
         #1 Mpc in m
@@ -154,14 +159,15 @@ class TSZHalo(object):
         gravity = 6.67408e-11
         #Hubble factor (~70km/s/Mpc) at z=0 in s^-1
         hubble = self.hubble*3.24077929e-18
-        hubz2 = hzoverh0(aa, self.omegam0) * hubble**2
+        hubz2 = h2overh0(aa, self.omegam0) * hubble**2
         #Critical density at redshift in units of kg m^-3
         rhocrit = 3 * hubz2 / (8*math.pi* gravity)
         return rhocrit
 
-    def Rs(self, mass, aa):
+    def Rs(self, mass, aa, conc = 0):
         """Scale radius of the halo in Mpc/h"""
-        conc = self.concentration(mass,aa)
+        if conc == 0:
+            conc = self.concentration(mass,aa)
         return self.R200(mass)/conc
 
     def tsz_per_halo(self, M, aa,kk):
@@ -175,7 +181,7 @@ class TSZHalo(object):
         #Units:  Mpc*2
         return 4 * math.pi * integrated
 
-    def y3d(self, x, mass,aa):
+    def y3d(self, x, mass,aa, conc=0):
         """Electron pressure profile from K&S 2002 eq 7. Units of 1 / Mpc."""
         #Electron mass in kg
         me = 9.11e-31
@@ -183,7 +189,7 @@ class TSZHalo(object):
         sigmat = 6.6524e-29
         #Units are s^2 / kg
         prefac = sigmat / me / (1000*self.light**2)
-        return (2 + 2*0.76)/(3 + 5*0.76) * self.Pgas(x, mass,aa) * prefac
+        return (2 + 2*0.76)/(3 + 5*0.76) * self.Pgas(x, mass,aa, conc=conc) * prefac
 
     def gamma(self, conc):
         """Polytropic index for a cluster from K&S 02, eq. 17"""
@@ -200,10 +206,11 @@ class TSZHalo(object):
         eta0 = self.eta0(conc)
         BB = 3./eta0 * (gamma - 1)/gamma / (np.log(1+conc)/conc - 1/(1+conc))
         #Series expansion for small x
-        if np.size(x) == 1 and np.all(x) < 1e-4:
-            ll1p = (x/2. - x**2/3 + x**3/4 - x**4/5)
-        else:
-            ll1p = (1-np.log1p(x)/x)
+        #if np.size(x) == 1 and np.all(x) < 1e-4:
+            #ll1p = (x/2. - x**2/3 + x**3/4 - x**4/5)
+        #else:
+            #ll1p = (1-np.log1p(x)/x)
+        ll1p = (1-np.log1p(x)/x)
         return np.power(1 - BB * ll1p, 1./(gamma-1))
 
     def rhogas0(self, conc, mass, aa):
@@ -214,7 +221,7 @@ class TSZHalo(object):
         rhogas0 *= conc**2 / (np.log(1+conc) - conc/(1+conc)) /((1+conc)**2*self.ygas(conc, conc))
         return rhogas0
 
-    def Pgas(self, x, mass, aa):
+    def Pgas(self, x, mass, aa, conc = 0 ):
         """Gas pressure profile, K&S 02 eq 8.
         Other choices are possible (indeed preferred)!
         Units are kg / Mpc /s^2"""
@@ -228,7 +235,8 @@ class TSZHalo(object):
         protonmass = 1.6726219e-27
         #1 Mpc in m
         Mpc = 3.086e22
-        conc = self.concentration(mass, aa)
+        if conc == 0:
+            conc = self.concentration(mass, aa)
         gamma = self.gamma(conc)
         #In M_sun / Mpc^3, as the constant below.
         #Eq. 21
@@ -241,7 +249,9 @@ class TSZHalo(object):
     def _ygas3d_integrand(self, rr, kk, mass,aa):
         """Integrand of the TSZ profile from Komatsu & Seljak 2002 eq. 2"""
         #The bessel function does little unless k is large.
-        return scipy.special.j0(rr*kk) * self.y3d(rr/self.Rs(mass, aa), mass,aa) * rr * rr
+        conc = self.concentration(mass, aa)
+        integrand = self.y3d(rr/self.Rs(mass, aa, conc=conc), mass,aa, conc=conc) * rr * rr
+        return scipy.special.j0(rr*kk) * integrand
 
     def isw_hh_l(self, kk, l):
         """The change in the CMB temperature from the late-time (dark energy) ISW effect.
@@ -348,3 +358,8 @@ class TSZHalo(object):
         x = nu/56.78
         expx = math.exp(x)
         return x * (expx+1)/(expx-1) - 4
+
+if __name__ == "__main__":
+    ll = np.linspace(4,200)
+    ttisw = TSZHalo()
+    print(ttisw.crosscorr(ll[0], ttisw.tsz_window_function_limber,ttisw.tsz_window_function_limber))
