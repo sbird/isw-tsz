@@ -48,6 +48,67 @@ def angular_diameter(aa, omegam0, hub=0.7):
     H0 = hub * 100 # km/s/Mpc
     return comoving * light * aa / H0
 
+class yygas(object):
+    """Helper class for the gas profile, which allows us to precompute the prefactors.
+    Expects units without the h!"""
+    def __init__(self, conc, mass, rhogas_cos, R200):
+        self.gamma = self._gamma(conc)
+        self.eta0 = self._eta0(conc)
+        self.BB = 3./self.eta0 * (self.gamma - 1)/self.gamma / (np.log(1+conc)/conc - 1/(1+conc))
+        #Newtons constant in units of m^3 kg^-1 s^-2
+        gravity = 6.67408e-11
+        #Boltzmann constant in m2 kg s-2 K-1
+        kboltz = 1.38e-23
+        #Solar mass in kg
+        solarmass = 1.98855e30
+        #Proton mass in kg
+        protonmass = 1.6726219e-27
+        #1 Mpc in m
+        Mpc = 3.086e22
+        #In M_sun / Mpc^3, as the constant below.
+        #Eq. 21
+        self.rhogas0 = rhogas_cos * conc**2 / (np.log(1+conc) - conc/(1+conc)) /((1+conc)**2*self.ygas(conc))
+        # Units                                    m^3 s^-2                      kg                m        K s^2 / m^2 /kg
+        self.Tgas0 = self.eta0 * 4 / (3+5*0.76) * gravity * protonmass * (mass * solarmass) /3/(R200* Mpc)/kboltz
+        self.Pgas0 =  (3 + 5 * 0.76) / 4 * self.rhogas0 * solarmass / (protonmass) * kboltz * self.Tgas0 / Mpc**2
+        #Electron mass in kg
+        me = 9.11e-31
+        #Thompson cross-section in m^2
+        sigmat = 6.6524e-29
+        #speed of light in m/s
+        light = 2.99e8
+        #Units are s^2 / kg
+        self.y3d_prefac = sigmat / me / light**2
+
+    def _gamma(self, conc):
+        """Polytropic index for a cluster from K&S 02, eq. 17"""
+        return 1.137 + 8.94e-2 * np.log(conc/5) - 3.68e-3 * (conc-5)
+
+    def _eta0(self, conc):
+        """Mass-temperature normalisation factor at the center, eta(0)."""
+        return 2.235 + 0.202 * (conc - 5) - 1.16e-3*(conc-5)**2
+
+    def ygas(self, x):
+        """Dimensionless part of the K&S pressure profile, eq. 15"""
+        #K&S 02 eq. 17 and 18, fitting formulae.
+        #Series expansion for small x
+        #if np.size(x) == 1 and np.all(x) < 1e-4:
+            #ll1p = (x/2. - x**2/3 + x**3/4 - x**4/5)
+        #else:
+            #ll1p = (1-np.log1p(x)/x)
+        ll1p = (1-np.log1p(x)/x)
+        return (1 - self.BB * ll1p)**(1./(self.gamma-1))
+
+    def Pgas(self, x):
+        """Gas pressure profile, K&S 02 eq 8.
+        Other choices are possible (indeed preferred)!
+        Units are kg / Mpc /s^2"""
+        return self.Pgas0 * self.ygas(x)**self.gamma
+
+    def y3d(self, x):
+        """Electron pressure profile from K&S 2002 eq 7. Units of 1 / Mpc."""
+        return (2 + 2*0.76)/(3 + 5*0.76) * self.Pgas(x) * self.y3d_prefac
+
 class TSZHalo(object):
     """Extends the NFW halo calculation with equations for a tSZ profile."""
     def __init__(self, omegam0 = 0.27, omegab0=0.0449, hubble = 0.7, sigma8=0.8):
@@ -60,7 +121,7 @@ class TSZHalo(object):
         self.light = 2.99e5
         #tSZ frequency
         self.nu = 100.
-        self.overden = hm.Overdensities(0,omegam0, omegab0,1-omegam0,hubble, 0.97,sigma8,log_mass_lim=(12,15))
+        self.overden = hm.Overdensities(0,omegam0, omegab0,1-omegam0,hubble, 0.97,sigma8,log_mass_lim=(10,18))
         self._aaa = np.linspace(0.05,1,60)
         self._growths = np.array([self._generate_lingrowthfac(aa)/aa for aa in self._aaa])
         #Normalise to z=0.
@@ -68,7 +129,7 @@ class TSZHalo(object):
         self.conc_model = concentration.LudlowConcentration(self.Dofz)
         self._conformal = np.array([conformal_time(aa, omegam0) for aa in self._aaa])
         self.conformal_time = scipy.interpolate.InterpolatedUnivariateSpline(self._aaa,self._conformal)
-        self._rhocrit0 = self.rhocrit(1)
+        self._rhocrit0 = self.overden.rhocrit(0)
 
     def Dofz(self, zz):
         """Helper"""
@@ -92,9 +153,10 @@ class TSZHalo(object):
         c = 1.19
         return A * ( np.power((sigma / b), -a) + 1) * np.exp(-1 * c / sigma / sigma)
 
-    def dndm_z(self, mass, aa):
+    def dndm_z_b(self, mass, aa):
         """Returns the halo mass function dn/dM in units of h^4 M_sun^-1 Mpc^-3
-        Requires mass in units of M_sun /h """
+        Requires mass in units of M_sun /h
+        (times by a halo bias)"""
         # Mean matter density at redshift z in units of h^2 Msolar/Mpc^3
         # This is the comoving density at redshift z in units of h^-1 M_sun (Mpc/h)^-3 (comoving)
         # Compute as a function of the critical density at z=0.
@@ -105,7 +167,8 @@ class TSZHalo(object):
         dlogsigma = self.overden.log_sigmaof_M(mass)*growth/mass
         #We have dn / dM = - d ln sigma /dM rho_0/M f(sigma)
         dndM = - dlogsigma*mass_func/mass*rhom
-        return dndM
+        nu = 1.686/sigma
+        return dndM * self.bias(nu)
 
     def _generate_lingrowthfac(self, aa):
         """
@@ -144,113 +207,34 @@ class TSZHalo(object):
 
     def R200(self, mass):
         """Get the virial radius in comoving Mpc/h for a given mass in Msun/h"""
+        #Units are Msun  h^2 / Mpc^3
         rhoc = self._rhocrit0
-        #in kg
-        solarmass = 1.98855e30
-        #1 Mpc in m
-        Mpc = 3.086e22
-        #Virial radius R200 in Mpc from the virial mass
-        R200 = np.cbrt(3 * mass * solarmass / (4* math.pi* 200 * rhoc))/Mpc
-        return R200
-
-    def rhocrit(self, aa):
-        """Critical density at redshift of the snapshot. Units are kg m^-3."""
-        #Newtons constant in units of m^3 kg^-1 s^-2
-        gravity = 6.67408e-11
-        #Hubble factor (~70km/s/Mpc) at z=0 in s^-1
-        hubble = self.hubble*3.24077929e-18
-        hubz2 = h2overh0(aa, self.omegam0) * hubble**2
-        #Critical density at redshift in units of kg m^-3
-        rhocrit = 3 * hubz2 / (8*math.pi* gravity)
-        return rhocrit
-
-    def Rs(self, mass, aa, conc = 0):
-        """Scale radius of the halo in Mpc/h"""
-        if conc == 0:
-            conc = self.concentration(mass,aa)
-        return self.R200(mass)/conc
+        #Virial radius R200 in Mpc/h from the virial mass
+        return np.cbrt(3 * mass / (4* math.pi* 200 * rhoc))
 
     def tsz_per_halo(self, M, aa,kk):
         """The 2D fourier transform of the projected Compton y-parameter, per halo.
         Eq 2 of Komatsu and Seljak 2002, slightly modified to remove some of the dimensionless parameters.
-        Units are Mpc/h^2."""
+        Takes mass in units of Msun/h, returns units of Mpc/h^2."""
         #Upper limit is the virial radius.
-        integrated,err = scipy.integrate.quadrature(self._ygas3d_integrand, 0., self.R200(M), (kk, M,aa))
+        conc = self.concentration(M, aa)
+        #Get rid of factor of h
+        R200 = self.R200(M)/self.hubble
+        rhogas_cos = (self.omegab0  / self.omegam0) * 200 * self._rhocrit0/3
+        ygas = yygas(conc, M/self.hubble, rhogas_cos*self.hubble**2, R200)
+        #Also no factor of h
+        Rs = R200/conc
+        integrated,err = scipy.integrate.quadrature(self._ygas3d_integrand, 0., R200, (kk, Rs, ygas))
 #         if err/integrated > 0.1:
 #             raise RuntimeError("Err in linear growth: ",err)
         #Units:  Mpc*2
-        return 4 * math.pi * integrated
+        return 4 * math.pi * integrated*self.hubble**2
 
-    def y3d(self, x, mass,aa, conc=0):
-        """Electron pressure profile from K&S 2002 eq 7. Units of 1 / Mpc."""
-        #Electron mass in kg
-        me = 9.11e-31
-        #Thompson cross-section in m^2
-        sigmat = 6.6524e-29
-        #Units are s^2 / kg
-        prefac = sigmat / me / (1000*self.light**2)
-        return (2 + 2*0.76)/(3 + 5*0.76) * self.Pgas(x, mass,aa, conc=conc) * prefac
-
-    def gamma(self, conc):
-        """Polytropic index for a cluster from K&S 02, eq. 17"""
-        return 1.137 + 8.94e-2 * np.log(conc/5) - 3.68e-3 * (conc-5)
-
-    def eta0(self, conc):
-        """Mass-temperature normalisation factor at the center, eta(0)."""
-        return 2.235 + 0.202 * (conc - 5) - 1.16e-3*(conc-5)**2
-
-    def ygas(self, x, conc):
-        """Dimensionless part of the K&S pressure profile, eq. 15"""
-        #K&S 02 eq. 17 and 18, fitting formulae.
-        gamma = self.gamma(conc)
-        eta0 = self.eta0(conc)
-        BB = 3./eta0 * (gamma - 1)/gamma / (np.log(1+conc)/conc - 1/(1+conc))
-        #Series expansion for small x
-        #if np.size(x) == 1 and np.all(x) < 1e-4:
-            #ll1p = (x/2. - x**2/3 + x**3/4 - x**4/5)
-        #else:
-            #ll1p = (1-np.log1p(x)/x)
-        ll1p = (1-np.log1p(x)/x)
-        return np.power(1 - BB * ll1p, 1./(gamma-1))
-
-    def rhogas0(self, conc, mass, aa):
-        """Density at halo center."""
-        #In M_sun / Mpc^3, as the constant below.
-        #Eq. 21
-        rhogas0 = (self.omegab0  / self.omegam0) * mass / 4 / math.pi / self.R200(mass)**3 * self.hubble**2
-        rhogas0 *= conc**2 / (np.log(1+conc) - conc/(1+conc)) /((1+conc)**2*self.ygas(conc, conc))
-        return rhogas0
-
-    def Pgas(self, x, mass, aa, conc = 0 ):
-        """Gas pressure profile, K&S 02 eq 8.
-        Other choices are possible (indeed preferred)!
-        Units are kg / Mpc /s^2"""
-        #Newtons constant in units of m^3 kg^-1 s^-2
-        gravity = 6.67408e-11
-        #Boltzmann constant in m2 kg s-2 K-1
-        kboltz = 1.38e-23
-        #Solar mass in kg
-        solarmass = 1.98855e30
-        #Proton mass in kg
-        protonmass = 1.6726219e-27
-        #1 Mpc in m
-        Mpc = 3.086e22
-        if conc == 0:
-            conc = self.concentration(mass, aa)
-        gamma = self.gamma(conc)
-        #In M_sun / Mpc^3, as the constant below.
-        #Eq. 21
-        rhogas0 = self.rhogas0(conc, mass,aa)
-        # Units                                    m^3 s^-2                      kg                m        K s^2 / m^2 /kg
-        Tgas0 = self.eta0(conc) * 4 / (3+5*0.76) * gravity * protonmass * (mass * solarmass) /3/(self.R200(mass)* Mpc)/kboltz
-        Pgas0 =  (3 + 5 * 0.76) / 4 * rhogas0 * solarmass / (protonmass) * kboltz * Tgas0 / Mpc**2
-        return Pgas0 * self.ygas(x, conc)**gamma
-
-    def _ygas3d_integrand(self, rr, kk, mass,aa):
-        """Integrand of the TSZ profile from Komatsu & Seljak 2002 eq. 2"""
+    def _ygas3d_integrand(self, rr, kk, Rs, ygas):
+        """Integrand of the TSZ profile from Komatsu & Seljak 2002 eq. 2.
+        Units are Mpc."""
         #The bessel function does little unless k is large.
-        conc = self.concentration(mass, aa)
-        integrand = self.y3d(rr/self.Rs(mass, aa, conc=conc), mass,aa, conc=conc) * rr * rr
+        integrand = ygas.y3d(rr/Rs) * rr * rr
         return scipy.special.j0(rr*kk) * integrand
 
     def isw_hh_l(self, kk, l):
@@ -273,10 +257,9 @@ class TSZHalo(object):
         Dplusda = self.Dplusda(aa)
         return Dplusda * scipy.special.sph_jn(l, kk * rr)
 
-    def bias(self,mass, aa):
+    def bias(self,nu):
         """Formula for the bias of a halo, from Sheth-Tormen 1999."""
         delta_c = 1.686
-        nu = 1.686/self.overden.sigmaof_M(mass)/self.lingrowthfac(aa)
         bhalo = (1 + (0.707*nu**2 -1)/ delta_c) + 2 * 0.3 * delta_c / (1 + (0.707 * nu**2)**0.3)
         return bhalo
 
@@ -289,13 +272,12 @@ class TSZHalo(object):
         return integrated
 
     def _tsz_mass_integrand(self, logM, aa, kk):
-        """Integrand for the tSZ mass integral. Units of h/Mpc h/Msun"""
+        """Integrand for the tSZ mass integral. Units of 1/Mpc"""
         MM = np.exp(logM)
         y3d = self.tsz_per_halo(MM, aa, kk/aa)
-        bb = self.bias(MM, aa)
-        dndm = self.dndm_z(MM, aa)
-        #Units: Mpc/h^2      (Mpc/h)-3
-        return MM * y3d * bb * dndm
+        dndm_b = self.dndm_z_b(MM, aa)
+        #Units: Msun/h Mpc/h^2      (Mpc/h)-3/(Msun/h)
+        return MM * y3d * dndm_b * self.hubble
 
     def tsz_yy_ll(self,kk, l):
         """Window function for the tSZ power spectrum. Eq. 18 of Taburet 2010"""
@@ -307,7 +289,7 @@ class TSZHalo(object):
         """Integrand for the tSZ calculation above.
         Dimensionless."""
         #Mpc ^-1
-        Tmass = self.tsz_mass_integral(aa, kk) * self.hubble
+        Tmass = self.tsz_mass_integral(aa, kk)
         rr = self.light / self.H0 * self.conformal_time(aa)
         Dplus = self.lingrowthfac(aa)
         return aa**(-2) * Tmass * Dplus * scipy.special.sph_jn(l, kk * rr) / hzoverh0(aa, self.omegam0)
@@ -315,7 +297,7 @@ class TSZHalo(object):
     def tsz_window_function_limber(self, aa, kk):
         """The window function for the tSZ that appears in the C_l if we use the Limber approximation.
         This gets rid of the spherical bessels."""
-        Tmass = self.tsz_mass_integral(aa, kk) * self.hubble
+        Tmass = self.tsz_mass_integral(aa, kk)
         Dplus = self.lingrowthfac(aa)
         return self.gg(self.nu) * self.light / self.H0 * aa**(-2) * Tmass * Dplus / hzoverh0(aa, self.omegam0)
 
