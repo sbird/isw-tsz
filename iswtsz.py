@@ -48,7 +48,7 @@ def angular_diameter(aa, omegam0, hub=0.7):
     H0 = hub * 100 # km/s/Mpc
     return comoving * light * aa / H0
 
-class yygas(object):
+class YYgas(object):
     """Helper class for the gas profile, which allows us to precompute the prefactors.
     Expects units without the h!"""
     def __init__(self, conc, mass, rhogas_cos, R200):
@@ -227,8 +227,8 @@ class TSZHalo(object):
         conc = self.concentration(M, aa)
         #Get rid of factor of h
         R200 = self.R200(M)/self.hubble
-        rhogas_cos = (self.omegab0  / self.omegam0) * 200 * self._rhocrit0/3
-        ygas = yygas(conc, M/self.hubble, rhogas_cos*self.hubble**2, R200)
+        rhogas_cos = (self.omegab0  / self.omegam0) * 200 * self._rhocrit0
+        ygas = YYgas(conc, M/self.hubble, rhogas_cos*self.hubble**2, R200)
         #Also no factor of h
         Rs = R200/conc
         redk = kk * Rs
