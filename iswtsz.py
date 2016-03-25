@@ -12,45 +12,98 @@ import matplotlib.pyplot as plt
 import halo_mass_function as hm
 import concentration
 
-def hzoverh0(a, omegam0):
-    """ returns: H(a) / H0  = [omegam/a**3 + (1-omegam)]**0.5 """
-    return np.sqrt(omegam0/a**3 + (1.-omegam0))
+class LinearGrowth(object):
+    """Class to store functions related to the linear growth factor and the Hubble flow."""
+    def __init__(self, omegam0=0.27, hub=0.7, w0=-1., wa=0.):
+        self.omegam0 = omegam0
+        self.hub = hub
+        self.w0 = w0
+        self.wa = wa
+        self._aaa = np.linspace(0.05,1,60)
+        self._growths = np.array([self._generate_lingrowthfac(aa)/aa for aa in self._aaa])
+        #Normalise to z=0.
+        self._lingrowthfac=scipy.interpolate.InterpolatedUnivariateSpline(self._aaa,self._growths)
+        self._conformal = np.array([self._generate_conformal_time(aa) for aa in self._aaa])
+        self.conformal_time = scipy.interpolate.InterpolatedUnivariateSpline(self._aaa,self._conformal)
 
-def h2overh0(a, omegam0):
-    """ returns: H^2(a) / H0^2  = [omegam/a**3 + (1-omegam)]"""
-    return omegam0/a**3 + (1.-omegam0)
+    def hzoverh0(self, a):
+        """ returns: H(a) / H0  = [omegam/a**3 + (1-omegam)]**0.5 """
+        return np.sqrt(self.h2overh0(a))
 
-def _lingrowthintegrand(a,omegam0):
-    """ (e.g. eq. 8 in lukic et al. 2008)   returns: da / [a*H(a)/H0]**3 """
-    return np.power(a * hzoverh0(a,omegam0),-3)
+    def h2overh0(self, a):
+        """ returns: H^2(a) / H0^2  = [omegam/a**3 + (1-omegam)]"""
+        return self.omegam0/a**3 + (1.-self.omegam0)
 
-def _ang_diam_integrand(aa, omegam0):
-    """Integrand for the ang. diam distance: 1/a^2 H(a)"""
-    return 1./(aa**2*hzoverh0(aa, omegam0))
+    def _lingrowthintegrand(self, a):
+        """ (e.g. eq. 8 in lukic et al. 2008)   returns: da / [a*H(a)/H0]**3 """
+        return np.power(a * self.hzoverh0(a),-3)
 
-def _conf_time_integrand(aa, omegam0):
-    """Integrand for the ang. diam distance: 1/a^2 H(a)"""
-    return 1./hzoverh0(aa, omegam0)
+    def _ang_diam_integrand(self, aa):
+        """Integrand for the ang. diam distance: 1/a^2 H(a)"""
+        return 1./(aa**2*self.hzoverh0(aa))
 
-def conformal_time(aa, omegam0):
-    """Conformal time to scale factor a: int(1/H da).
-    This is dimensionless; to get dimensionful value divide by H0."""
-    conf, err = scipy.integrate.quad(_conf_time_integrand, aa, 1., omegam0)
-    if err/(conf+0.01) > 0.1:
-        raise RuntimeError("Err in angular diameter: ",err)
-    return conf
+    def _conf_time_integrand(self, aa):
+        """Integrand for the ang. diam distance: 1/a^2 H(a)"""
+        return 1./self.hzoverh0(aa)
 
-def angular_diameter(aa, omegam0, hub=0.7):
-    """The angular diameter distance to some redshift in units of comoving Mpc."""
-    #speed of light in km/s
-    light = 2.99e5
-    #Dimensionless comoving distance
-    comoving,err = scipy.integrate.quad(_ang_diam_integrand, aa, 1, omegam0)
-    if err/(comoving+0.01) > 0.1:
-        raise RuntimeError("Err in angular diameter: ",err)
-    #angular diameter distance
-    H0 = hub * 100 # km/s/Mpc
-    return comoving * light * aa / H0
+    def _generate_conformal_time(self, aa):
+        """Conformal time to scale factor a: int(1/H da).
+        This is dimensionless; to get dimensionful value divide by H0."""
+        conf, err = scipy.integrate.quad(self._conf_time_integrand, aa, 1.)
+        if err/(conf+0.01) > 0.1:
+            raise RuntimeError("Err in angular diameter: ",err)
+        return conf
+
+    def angular_diameter(self, aa):
+        """The angular diameter distance to some redshift in units of comoving Mpc."""
+        #speed of light in km/s
+        light = 2.99e5
+        #Dimensionless comoving distance
+        comoving,err = scipy.integrate.quad(self._ang_diam_integrand, aa, 1)
+        if err/(comoving+0.01) > 0.1:
+            raise RuntimeError("Err in angular diameter: ",err)
+        #angular diameter distance
+        H0 = self.hub * 100 # km/s/Mpc
+        return comoving * light * aa / H0
+
+    def _generate_lingrowthfac(self, aa):
+        """
+        returns: linear growth factor, b(a) normalized to 1 at z=0, good for flat lambda only
+        a = 1/1+z
+        b(a) = Delta(a) / Delta(a=1)   [ so that b(z=0) = 1 ]
+        (and b(a) [Einstein de Sitter, omegam=1] = a)
+
+        Delta(a) = 5 omegam / 2 H(a) / H(0) * integral[0:a] [da / [a H(a) H0]**3]
+        equation  from  peebles 1980 (or e.g. eq. 8 in lukic et al. 2008) """
+        ## 1st calc. for z=z
+        lingrowth,err = scipy.integrate.quad(self._lingrowthintegrand,0.,aa)
+        if err/lingrowth > 0.1:
+            raise RuntimeError("Err in linear growth: ",err)
+        lingrowth *= 5./2. * self.omegam0 * self.hzoverh0(aa)
+        return lingrowth
+
+    def lingrowthfac(self, aa):
+        """Growth function, using the interpolator where we can, otherwise doing it for real."""
+        growth = self._lingrowthfac(aa)*aa
+        #if aa > self._aaa[0]:
+            #growth = self._lingrowthfac(aa)*aa
+        #else:
+            #growth = self._generate_lingrowthfac(aa)
+        return growth / self._lingrowthfac(1.)
+
+    def EprimebyE(self, aa):
+        """Returns d/da(H/H0) / (H/H0)"""
+        EprimebyE = -1.5 * self.omegam0 / aa**4 / self.h2overh0(aa)
+        return EprimebyE
+
+    def Dplusda(self, aa):
+        """The derivative of the growth function divided by a w.r.t a."""
+        #This is d/da(H/H0) / (H/H0)
+        #This is d D+/da
+        Dplusda = 2.5 * self.omegam0 / aa**3 / self.h2overh0(aa)/self._lingrowthfac(1.)
+        Dplusda += self.EprimebyE(aa) * self.lingrowthfac(aa)
+        return Dplusda/ aa - self.lingrowthfac(aa) /aa**2
+
 
 class YYgas(object):
     """Helper class for the gas profile, which allows us to precompute the prefactors.
@@ -122,7 +175,7 @@ class YYgas(object):
 
 class TSZHalo(object):
     """Extends the NFW halo calculation with equations for a tSZ profile."""
-    def __init__(self, omegam0 = 0.27, omegab0=0.0449, hubble = 0.7, sigma8=0.8):
+    def __init__(self, omegam0 = 0.27, omegab0=0.0449, hubble = 0.7, sigma8=0.8, tszbias=1., w0=-1., wa=0.):
         self.omegam0 = omegam0
         self.omegab0 = omegab0
         self.hubble = hubble
@@ -133,28 +186,14 @@ class TSZHalo(object):
         #tSZ frequency
         self.nu = 100.
         self.overden = hm.Overdensities(0,omegam0, omegab0,1-omegam0,hubble, 0.97,sigma8,log_mass_lim=(10,18))
-        self._aaa = np.linspace(0.05,1,60)
-        self._growths = np.array([self._generate_lingrowthfac(aa)/aa for aa in self._aaa])
-        #Normalise to z=0.
-        self._lingrowthfac=scipy.interpolate.InterpolatedUnivariateSpline(self._aaa,self._growths)
         self.conc_model = concentration.LudlowConcentration(self.Dofz)
-        self._conformal = np.array([conformal_time(aa, omegam0) for aa in self._aaa])
-        self.conformal_time = scipy.interpolate.InterpolatedUnivariateSpline(self._aaa,self._conformal)
         self._rhocrit0 = self.overden.rhocrit(0)
+        self.lingrowth = LinearGrowth(omegam0=omegam0, hub=hubble, w0=w0, wa=wa)
 
     def Dofz(self, zz):
         """Helper"""
         aa = 1./(1+zz)
-        return self.lingrowthfac(aa)
-
-    def lingrowthfac(self, aa):
-        """Growth function, using the interpolator where we can, otherwise doing it for real."""
-        growth = self._lingrowthfac(aa)*aa
-        #if aa > self._aaa[0]:
-            #growth = self._lingrowthfac(aa)*aa
-        #else:
-            #growth = self._generate_lingrowthfac(aa)
-        return growth / self._lingrowthfac(1.)
+        return self.lingrowth.lingrowthfac(aa)
 
     def mass_function(self, sigma):
         """Tinker et al. 2008, eqn 3, Delta=200 # Delta=200"""
@@ -172,7 +211,7 @@ class TSZHalo(object):
         # This is the comoving density at redshift z in units of h^-1 M_sun (Mpc/h)^-3 (comoving)
         # Compute as a function of the critical density at z=0.
         rhom = self.overden.rhocrit(0) * self.omegam0
-        growth = self.lingrowthfac(aa)
+        growth = self.lingrowth.lingrowthfac(aa)
         sigma = self.overden.sigmaof_M(mass)*growth
         mass_func = self.mass_function(sigma)
         dlogsigma = self.overden.log_sigmaof_M(mass)*growth/mass
@@ -181,39 +220,10 @@ class TSZHalo(object):
         nu = 1.686/sigma
         return dndM * self.bias(nu)
 
-    def _generate_lingrowthfac(self, aa):
-        """
-        returns: linear growth factor, b(a) normalized to 1 at z=0, good for flat lambda only
-        a = 1/1+z
-        b(a) = Delta(a) / Delta(a=1)   [ so that b(z=0) = 1 ]
-        (and b(a) [Einstein de Sitter, omegam=1] = a)
-
-        Delta(a) = 5 omegam / 2 H(a) / H(0) * integral[0:a] [da / [a H(a) H0]**3]
-        equation  from  peebles 1980 (or e.g. eq. 8 in lukic et al. 2008) """
-        ## 1st calc. for z=z
-        lingrowth,err = scipy.integrate.quad(_lingrowthintegrand,0.,aa, self.omegam0)
-        if err/lingrowth > 0.1:
-            raise RuntimeError("Err in linear growth: ",err)
-        lingrowth *= 5./2. * self.omegam0 * hzoverh0(aa,self.omegam0)
-        return lingrowth
-
-    def EprimebyE(self, aa):
-        """Returns d/da(H/H0) / (H/H0)"""
-        EprimebyE = -1.5 * self.omegam0 / aa**4 / h2overh0(aa, self.omegam0)
-        return EprimebyE
-
-    def Dplusda(self, aa):
-        """The derivative of the growth function divided by a w.r.t a."""
-        #This is d/da(H/H0) / (H/H0)
-        #This is d D+/da
-        Dplusda = 2.5 * self.omegam0 / aa**3 / h2overh0(aa, self.omegam0)/self._lingrowthfac(1.)
-        Dplusda += self.EprimebyE(aa) * self.lingrowthfac(aa)
-        return Dplusda/ aa - self.lingrowthfac(aa) /aa**2
-
     def concentration(self,mass, aa):
         """Compute the concentration for a halo mass"""
         zz = 1./aa-1
-        nu = 1.686/self.overden.sigmaof_M(mass)#/self.lingrowthfac(aa)
+        nu = 1.686/self.overden.sigmaof_M(mass)
         return self.conc_model.comoving_concentration(nu, zz)
 
     def R200(self, mass):
@@ -270,10 +280,10 @@ class TSZHalo(object):
         """Integrand for the ISW calculation above.
         (da)  d/da(D+/a) j_l(k*r). Dimensionless"""
         #Comoving distance to this scale factor.
-        rr = self.light / self.H0 * self.conformal_time(aa)
+        rr = self.light / self.H0 * self.lingrowth.conformal_time(aa)
         #d/da (D+/a) = 5/2 omega_M / (H^2 a^4) + D+ /a ( H'/H - 1 /a)
         #Zero if H  = omega_M a^-3/2, D+ ~ a as H'/H ~ -3/2 / a
-        Dplusda = self.Dplusda(aa)
+        Dplusda = self.lingrowth.Dplusda(aa)
         return Dplusda * scipy.special.sph_jn(l, kk * rr)
 
     def bias(self,nu):
@@ -309,40 +319,40 @@ class TSZHalo(object):
         Dimensionless."""
         #Mpc ^-1
         Tmass = self.tsz_mass_integral(aa, kk)
-        rr = self.light / self.H0 * self.conformal_time(aa)
-        Dplus = self.lingrowthfac(aa)
-        return aa**(-2) * Tmass * Dplus * scipy.special.sph_jn(l, kk * rr) / hzoverh0(aa, self.omegam0)
+        rr = self.light / self.H0 * self.lingrowth.conformal_time(aa)
+        Dplus = self.lingrowth.lingrowthfac(aa)
+        return aa**(-2) * Tmass * Dplus * scipy.special.sph_jn(l, kk * rr) / self.lingrowth.hzoverh0(aa)
 
     def tsz_window_function_limber(self, aa, kk):
         """The window function for the tSZ that appears in the C_l if we use the Limber approximation.
         This gets rid of the spherical bessels."""
         Tmass = self.tsz_mass_integral(aa, kk)
-        Dplus = self.lingrowthfac(aa)
-        return self.gtsz(self.nu) * self.light / self.H0 * aa**(-2) * Tmass * Dplus / hzoverh0(aa, self.omegam0)
+        Dplus = self.lingrowth.lingrowthfac(aa)
+        return self.gtsz(self.nu) * self.light / self.H0 * aa**(-2) * Tmass * Dplus / self.lingrowth.hzoverh0(aa)
 
     def isw_window_function_limber(self, aa, kk):
         """The window function for the ISW that appears in the C_l if we use the Limber approximation."""
         #d/da (D+/a) = D+' / a - D+ / a^2
         #5/2 omega_M / (H^2 a^4) + D+ /a ( H'/H - 1 /a)
         #Zero if H  = omega_M a^-3/2, D+ ~ a as H'/H ~ -3/2 / a
-        Dplusda = self.Dplusda(aa)
+        Dplusda = self.lingrowth.Dplusda(aa)
         #Units:                 Mpc^-2                          Mpc^2
         return 3 * self.H0**2 / self.light**2 * self.omegam0 / kk**2 * Dplusda * aa**2
 
     def _crosscorr_integrand(self, aa, lmode, func1, func2):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
         #Units of rr are Mpc.
-        rr = self.light / self.H0 * self.conformal_time(aa)
+        rr = self.light / self.H0 * self.lingrowth.conformal_time(aa)
         #This is the Limber approximation: 1/Mpc
         kk = (lmode + 1/2) / rr
         #Convert k into h/Mpc and convert the result from (Mpc/h)**3 to Mpc**3
         PofKMpc = self.overden.PofK(kk/self.hubble) * self.hubble**3
         #Functions are dimensionless, so this needs to be dimensionless too.
-        return func1(aa, kk) * func2(aa,kk) / rr**2 * PofKMpc * hzoverh0(aa, self.omegam0) * self.H0 / self.light
+        return func1(aa, kk) * func2(aa,kk) / rr**2 * PofKMpc * self.lingrowth.hzoverh0(aa) * self.H0 / self.light
 
     def kk_limber(self, lmode, aa):
         """Compute the k-mode value for a given l in the limber approximation."""
-        rr = self.light / self.H0 * self.conformal_time(aa)
+        rr = self.light / self.H0 * self.lingrowth.conformal_time(aa)
         #This is the Limber approximation
         kk = (lmode + 1/2) / (rr+1e-12)
         return kk
