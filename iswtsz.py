@@ -424,7 +424,12 @@ if __name__ == "__main__":
     plt.clf()
 
     if len(sys.argv) > 2:
-        ndim, nwalkers = 3,1000
+        ndim, nwalkers = 3,100
         p0 = [np.array([(2-0.4)*np.random.random()+0.4,(-1.2+0.7)*np.random.random()-0.7, (-1.-0.7)*np.random.random()+0.7]) for _ in range(nwalkers)]
         sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=[ll, iswtsz, 0.1/iswtsz**2, iswisw, 0.1/iswisw**2, 1., 0.25])
-        sampler.run_mcmc(p0, 1000)
+        #Do burn-in
+        pos, prob, state = sampler.run_mcmc(p0, 100)
+        sampler.reset()
+        #Do full sampling
+        sampler.run_mcmc(pos, 1000)
+        np.savetxt("chain.txt", sampler.flatchain)
