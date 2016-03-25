@@ -88,15 +88,22 @@ class yygas(object):
         """Mass-temperature normalisation factor at the center, eta(0)."""
         return 2.235 + 0.202 * (conc - 5) - 1.16e-3*(conc-5)**2
 
+    def logxbyx(self, x):
+        """Helper function with a series expansion for small x"""
+        if x < 1e-4:
+            ll1p = (x/2. - x**2/3 + x**3/4 - x**4/5)
+        else:
+            ll1p = (1-np.log1p(x)/x)
+        return ll1p
+
     def ygas(self, x):
         """Dimensionless part of the K&S pressure profile, eq. 15"""
         #K&S 02 eq. 17 and 18, fitting formulae.
         #Series expansion for small x
-        #if np.size(x) == 1 and np.all(x) < 1e-4:
-            #ll1p = (x/2. - x**2/3 + x**3/4 - x**4/5)
-        #else:
-            #ll1p = (1-np.log1p(x)/x)
-        ll1p = (1-np.log1p(x)/x)
+        try:
+            ll1p = np.array([self.logxbyx(z) for z in x])
+        except TypeError:
+            ll1p = self.logxbyx(x)
         return (1 - self.BB * ll1p)**(1./(self.gamma-1))
 
     def Pgas(self, x):
@@ -224,18 +231,26 @@ class TSZHalo(object):
         ygas = yygas(conc, M/self.hubble, rhogas_cos*self.hubble**2, R200)
         #Also no factor of h
         Rs = R200/conc
-        integrated,err = scipy.integrate.quadrature(self._ygas3d_integrand, 0., R200, (kk, Rs, ygas))
-#         if err/integrated > 0.1:
-#             raise RuntimeError("Err in linear growth: ",err)
+        redk = kk * Rs
+        limit = 5/redk
+        integrated,err = scipy.integrate.quad(self._ygas3d_integrand, 0, np.min([conc,limit]), (redk, ygas))
+        if err/integrated > 0.1:
+            raise RuntimeError("Err in tsz integral: ",err, integrated)
+        #For large k the integrand becomes oscillatory and is exponentially suppressed.
+        #So approximate it to save breaking the integrator.
+        #This is computed by doing a contour integral and taking a (very bad) upper bound for the y_gas part.
+        #Use a bad approximation as zero is actually not bad either.
+        if conc > limit:
+            integrated += ygas.y3d(limit) * (limit * np.exp(-limit * redk)-conc * np.exp(-conc * redk))/redk**2
         #Units:  Mpc*2
-        return 4 * math.pi * integrated*self.hubble**2
+        return 4 * math.pi * Rs**3 * integrated*self.hubble**2
 
-    def _ygas3d_integrand(self, rr, kk, Rs, ygas):
+    def _ygas3d_integrand(self, xx, kk, ygas):
         """Integrand of the TSZ profile from Komatsu & Seljak 2002 eq. 2.
-        Units are Mpc."""
+        Units are Mpc. Takes dimensionless r/Rs and dimensionless k = k * Rs"""
         #The bessel function does little unless k is large.
-        integrand = ygas.y3d(rr/Rs) * rr * rr
-        return scipy.special.j0(rr*kk) * integrand
+        integrand = ygas.y3d(xx) * xx * xx
+        return scipy.special.j0(xx*kk) * integrand
 
     def isw_hh_l(self, kk, l):
         """The change in the CMB temperature from the late-time (dark energy) ISW effect.
