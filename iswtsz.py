@@ -5,6 +5,9 @@ import numpy as np
 import scipy
 import scipy.integrate
 import scipy.special
+import matplotlib
+matplotlib.use('PDF')
+import matplotlib.pyplot as plt
 import halo_mass_function as hm
 import concentration
 
@@ -278,12 +281,12 @@ class TSZHalo(object):
         bhalo = (1 + (0.707*nu**2 -1)/ delta_c) + 2 * 0.3 * delta_c / (1 + (0.707 * nu**2)**0.3)
         return bhalo
 
-    def tsz_mass_integral(self, aa, kk, mass=(1e12, 1e15)):
+    def tsz_mass_integral(self, aa, kk, mass=(1e12, 1e16)):
         """Formula for the mass integral of the tSZ power, Taburet 2010, 1012.5036.
         Units of h/Mpc"""
         (integrated, err) = scipy.integrate.quad(self._tsz_mass_integrand, np.log(mass[0]), np.log(mass[1]), (aa, kk))
         if err/(integrated+0.01) > 0.1:
-            raise RuntimeError("Err in tsz mass integral: ",err)
+            raise RuntimeError("Err in tsz mass integral: ",err," total:",integrated)
         return integrated
 
     def _tsz_mass_integrand(self, logM, aa, kk):
@@ -298,7 +301,7 @@ class TSZHalo(object):
         """Window function for the tSZ power spectrum. Eq. 18 of Taburet 2010"""
         integrated = scipy.integrate.quad(self._tsz_integrand,0.1,1, (kk,l))
         #units:     Mpc^-2              Mpc
-        return self.gg(self.nu) * integrated * self.light / self.H0
+        return self.gtsz(self.nu) * integrated * self.light / self.H0
 
     def _tsz_integrand(self, aa, kk, l):
         """Integrand for the tSZ calculation above.
@@ -314,7 +317,7 @@ class TSZHalo(object):
         This gets rid of the spherical bessels."""
         Tmass = self.tsz_mass_integral(aa, kk)
         Dplus = self.lingrowthfac(aa)
-        return self.gg(self.nu) * self.light / self.H0 * aa**(-2) * Tmass * Dplus / hzoverh0(aa, self.omegam0)
+        return self.gtsz(self.nu) * self.light / self.H0 * aa**(-2) * Tmass * Dplus / hzoverh0(aa, self.omegam0)
 
     def isw_window_function_limber(self, aa, kk):
         """The window function for the ISW that appears in the C_l if we use the Limber approximation."""
@@ -325,38 +328,55 @@ class TSZHalo(object):
         #Units:                 Mpc^-2                          Mpc^2
         return 3 * self.H0**2 / self.light**2 * self.omegam0 / kk**2 * Dplusda * aa**2
 
-    def _crosscorr_integrand(self, aa, ll, func1, func2):
+    def _crosscorr_integrand(self, aa, lmode, func1, func2):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
         #Units of rr are Mpc.
         rr = self.light / self.H0 * self.conformal_time(aa)
         #This is the Limber approximation: 1/Mpc
-        kk = (ll + 1/2) / rr
+        kk = (lmode + 1/2) / rr
         #Convert k into h/Mpc and convert the result from (Mpc/h)**3 to Mpc**3
         PofKMpc = self.overden.PofK(kk/self.hubble) * self.hubble**3
         #Functions are dimensionless, so this needs to be dimensionless too.
         return func1(aa, kk) * func2(aa,kk) / rr**2 * PofKMpc * hzoverh0(aa, self.omegam0) * self.H0 / self.light
 
-    def kk_limber(self, ll, aa):
+    def kk_limber(self, lmode, aa):
         """Compute the k-mode value for a given l in the limber approximation."""
         rr = self.light / self.H0 * self.conformal_time(aa)
         #This is the Limber approximation
-        kk = (ll + 1/2) / (rr+1e-12)
+        kk = (lmode + 1/2) / (rr+1e-12)
         return kk
 
-    def crosscorr(self, ll, func1, func2):
+    def crosscorr(self, lmode, func1, func2):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
-        (cll, err) = scipy.integrate.quad(self._crosscorr_integrand, 0.333, 1, (ll, func1, func2))
+        (cll, err) = scipy.integrate.quad(self._crosscorr_integrand, 0.333, 1, (lmode, func1, func2))
         if err / (cll+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
-        return (ll*(ll+1))/2/math.pi*cll
+        return (lmode*(lmode+1))/2/math.pi*cll
 
-    def gg(self,nu):
+    def gtsz(self,nu):
         """Frequency dependent part of the tSZ power."""
         x = nu/56.78
         expx = math.exp(x)
         return x * (expx+1)/(expx-1) - 4
 
 if __name__ == "__main__":
-    ll = np.linspace(4,200)
+    ll = np.linspace(4,500, 80)
     ttisw = TSZHalo()
-    print(ttisw.crosscorr(ll[0], ttisw.tsz_window_function_limber,ttisw.tsz_window_function_limber))
+    tsztsz = np.array([ttisw.crosscorr(l, ttisw.tsz_window_function_limber,ttisw.tsz_window_function_limber) for l in ll])
+    plt.loglog(ll, tsztsz, label="tSZ")
+    iswisw = np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.isw_window_function_limber) for l in ll])
+    plt.loglog(ll, iswisw, label="ISW")
+    iswtsz = np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.tsz_window_function_limber) for l in ll])
+    plt.loglog(ll, iswtsz, label="ISW-tSZ")
+    plt.legend()
+    plt.savefig("ISWtsz.pdf")
+    plt.clf()
+    #Plot redshift dependence
+    aa = np.linspace(0.333, 1, 80)
+    tszzz = np.array([ttisw.tsz_window_function_limber(a, ttisw.kk_limber(100, a)) for a in aa])
+    plt.plot(aa, tszzz/np.min(tszzz), label="tSZ")
+    iswzz = np.array([ttisw.isw_window_function_limber(a, ttisw.kk_limber(100, a)) for a in aa])
+    plt.plot(aa, iswzz/np.min(iswzz), label="ISW")
+    plt.legend()
+    plt.savefig("redshift.pdf")
+    plt.clf()
