@@ -109,7 +109,7 @@ class LinearGrowth(object):
 class YYgas(object):
     """Helper class for the gas profile, which allows us to precompute the prefactors.
     Expects units without the h!"""
-    def __init__(self, conc, mass, rhogas_cos, R200):
+    def __init__(self, conc, mass, rhogas_cos, R200, tszbias=1.):
         self.gamma = self._gamma(conc)
         self.eta0 = self._eta0(conc)
         self.BB = 3./self.eta0 * (self.gamma - 1)/self.gamma / (np.log(1+conc)/conc - 1/(1+conc))
@@ -136,7 +136,7 @@ class YYgas(object):
         #speed of light in m/s
         light = 2.99e8
         #Units are s^2 / kg
-        self.y3d_prefac = sigmat / me / light**2
+        self.y3d_prefac = tszbias * sigmat / me / light**2
 
     def _gamma(self, conc):
         """Polytropic index for a cluster from K&S 02, eq. 17"""
@@ -180,6 +180,7 @@ class TSZHalo(object):
         self.omegam0 = omegam0
         self.omegab0 = omegab0
         self.hubble = hubble
+        self.tszbias=tszbias
         #km/s/Mpc
         self.H0 = 100* self.hubble
         #speed of light in km/s
@@ -243,7 +244,7 @@ class TSZHalo(object):
         #Get rid of factor of h
         R200 = self.R200(M)/self.hubble
         rhogas_cos = (self.omegab0  / self.omegam0) * 200 * self._rhocrit0
-        ygas = YYgas(conc, M/self.hubble, rhogas_cos*self.hubble**2, R200)
+        ygas = YYgas(conc, M/self.hubble, rhogas_cos*self.hubble**2, R200, tszbias=self.tszbias)
         #Also no factor of h
         Rs = R200/conc
         redk = kk * Rs
