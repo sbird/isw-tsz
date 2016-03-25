@@ -32,7 +32,8 @@ class LinearGrowth(object):
 
     def h2overh0(self, a):
         """ returns: H^2(a) / H0^2  = [omegam/a**3 + (1-omegam)]"""
-        return self.omegam0/a**3 + (1.-self.omegam0)
+        #Include correction for w0,wa models. Note the a dependence disappears if w0, wa =-1,0
+        return self.omegam0/a**3 + (1.-self.omegam0)*a**(-3*(1+self.w0+self.wa))*np.exp(-3*self.wa*(1-a))
 
     def _lingrowthintegrand(self, a):
         """ (e.g. eq. 8 in lukic et al. 2008)   returns: da / [a*H(a)/H0]**3 """
@@ -92,9 +93,10 @@ class LinearGrowth(object):
         return growth / self._lingrowthfac(1.)
 
     def EprimebyE(self, aa):
-        """Returns d/da(H/H0) / (H/H0)"""
-        EprimebyE = -1.5 * self.omegam0 / aa**4 / self.h2overh0(aa)
-        return EprimebyE
+        """Returns d/da(H^2/H0^2) / (H^2/H0^2)"""
+        wapower = -3*(1+self.w0+self.wa)
+        Eprime = -1.5 * self.omegam0 / aa**4 + (1.-self.omegam0)*np.exp(-3*self.wa*(1-aa))*(wapower*aa**(wapower-1)+3*self.wa)
+        return Eprime / self.h2overh0(aa)
 
     def Dplusda(self, aa):
         """The derivative of the growth function divided by a w.r.t a."""
@@ -103,7 +105,6 @@ class LinearGrowth(object):
         Dplusda = 2.5 * self.omegam0 / aa**3 / self.h2overh0(aa)/self._lingrowthfac(1.)
         Dplusda += self.EprimebyE(aa) * self.lingrowthfac(aa)
         return Dplusda/ aa - self.lingrowthfac(aa) /aa**2
-
 
 class YYgas(object):
     """Helper class for the gas profile, which allows us to precompute the prefactors.
