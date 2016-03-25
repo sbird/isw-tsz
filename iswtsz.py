@@ -5,6 +5,7 @@ import numpy as np
 import scipy
 import scipy.integrate
 import scipy.special
+import emcee #hammer
 import matplotlib
 matplotlib.use('PDF')
 import matplotlib.pyplot as plt
@@ -359,6 +360,34 @@ class TSZHalo(object):
         expx = math.exp(x)
         return x * (expx+1)/(expx-1) - 4
 
+def lnprob(param, lvals, ISWtszdata, ISWtszCovar, ISWdata, ISWCovar, tszprior=0.8, tszwidth=0.25):
+    """Likelihood function for emcee.
+        The tSZ data is included as a prior on the mass bias of the tSZ halos
+        param - vector of parameters.
+        param[0] = tszbias (priored)
+        param[1] = w0
+        param[2] = wa
+        rpar, rperp - r values for Cdata
+        rr - r-values for Cpeak and Csmooth
+        Cpeak - correlation function for the peak shape (mom, l, r)
+        Csmooth - correlation function for the smooth shape (mom, l, r)
+        where mom is integral xi_l (mu ^n * P L) for n = 0,1,2
+        Cdata - observed correlation functions (rpar, rperp)
+    """
+    tszbias = param[0]
+    w0 = param[1]
+    wa = param[2]
+    simulation = TSZHalo(tszbias=tszbias, w0=w0, wa=wa)
+    #Compute the isw and tsz parameters
+    iswxisw = np.array([simulation.crosscorr(l, simulation.isw_window_function_limber,simulation.isw_window_function_limber) for l in lvals])
+    iswxtsz = np.array([simulation.crosscorr(l, simulation.isw_window_function_limber,simulation.tsz_window_function_limber) for l in lvals])
+    #Interpolators for the smooth and peak correlation templates
+    #Compute cosmological correlation for each r-value in the data
+    chisq  = np.sum((iswxtsz - ISWtszdata)**2/ISWtszCovar)
+    chisq += np.sum((iswxisw - ISWdata)**2/ISWCovar)
+    chisq += np.sum((tszbias - tszprior)**2/tszwidth)
+    return - np.log(chisq/2.)
+
 if __name__ == "__main__":
     ll = np.linspace(4,500, 80)
     ttisw = TSZHalo()
@@ -380,3 +409,9 @@ if __name__ == "__main__":
     plt.legend()
     plt.savefig("redshift.pdf")
     plt.clf()
+
+    if False:
+        ndim, nwalkers = 3,1000
+        p0 = [np.array([(2-0.4)*np.random.random()+0.4,(-1.2+0.7)*np.random.random()-0.7, (-1.-0.7)*np.random.random()+0.7]) for _ in range(nwalkers)]
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=[ll, iswtsz, 0.1/iswtsz**2, iswisw, 0.1/iswisw**2, 1., 0.25])
+        sampler.run_mcmc(p0, 1000)
