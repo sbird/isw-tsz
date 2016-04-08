@@ -429,10 +429,17 @@ if __name__ == "__main__":
     plt.savefig("redshift.pdf")
     plt.clf()
 
-    if len(sys.argv) > 2:
+    #Planck 2015 error on sigma_8
+    tszbias, tszbiaserr = np.sqrt(0.77/0.82), 0.02
+    tszerr = 0.02/0.77*tszzz
+    #Very simple estimate: Planck detects at roughly 3 sigma
+    iswerr = (iswisw/3.)**2
+    iswtszerr = np.sqrt(iswerr)*np.sqrt(tszerr)
+    if len(sys.argv) > 1:
+        print("Starting sampler")
         ndim, nwalkers = 3,100
         p0 = [np.array([(2-0.4)*np.random.random()+0.4,(-1.2+0.7)*np.random.random()-0.7, (-1.-0.7)*np.random.random()+0.7]) for _ in range(nwalkers)]
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=[ll, iswtsz, 0.1/iswtsz**2, iswisw, 0.1/iswisw**2, 1., 0.25])
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=[ll, iswtsz, iswtszerr, iswisw, iswerr, tszbias, tszbiaserr])
         #Do burn-in
         pos, prob, state = sampler.run_mcmc(p0, 100)
         sampler.reset()
