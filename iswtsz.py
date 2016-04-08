@@ -80,7 +80,7 @@ class LinearGrowth(object):
         ## 1st calc. for z=z
         lingrowth,err = scipy.integrate.quad(self._lingrowthintegrand,0.,aa)
         if err/lingrowth > 0.1:
-            raise RuntimeError("Err in linear growth: ",err)
+            raise RuntimeError("Err in linear growth: ",err/lingrowth,self.w0,self.wa)
         lingrowth *= 5./2. * self.omegam0 * self.hzoverh0(aa)
         return lingrowth
 
@@ -390,6 +390,12 @@ def lnprob(param, lvals, ISWtszdata, ISWtszCovar, ISWdata, ISWCovar, tszprior=0.
     tszbias = param[0]
     w0 = param[1]
     wa = param[2]
+    #Put a wide prior on wa.
+    if wa < -4 or wa > 5:
+        return -np.inf
+    #Prior w0 and wa combination so it is actually dark energy.
+    if w0+wa >= 0:
+        return -np.inf
     simulation = TSZHalo(tszbias=tszbias, w0=w0, wa=wa)
     #Compute the isw and tsz parameters
     iswxisw = np.array([simulation.crosscorr(l, simulation.isw_window_function_limber,simulation.isw_window_function_limber) for l in lvals])
@@ -430,6 +436,7 @@ if __name__ == "__main__":
         #Do burn-in
         pos, prob, state = sampler.run_mcmc(p0, 100)
         sampler.reset()
+        print("Burn-in done")
         #Do full sampling
         sampler.run_mcmc(pos, 1000)
         np.savetxt("chain.txt", sampler.flatchain)
