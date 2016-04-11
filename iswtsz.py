@@ -249,7 +249,7 @@ class TSZHalo(object):
         #Also no factor of h
         Rs = R200/conc
         redk = kk * Rs
-        limit = 5/redk
+        limit = 3/redk
         integrated,err = scipy.integrate.quad(self._ygas3d_integrand, 0, np.min([conc,limit]), (redk, ygas))
         if err/integrated > 0.1:
             raise RuntimeError("Err in tsz integral: ",err, integrated)
@@ -390,11 +390,15 @@ def lnprob(param, lvals, ISWtszdata, ISWtszCovar, ISWdata, ISWCovar, tszprior=0.
     tszbias = param[0]
     w0 = param[1]
     wa = param[2]
-    #Put a wide prior on wa.
-    if wa < -4 or wa > 5:
+    #Put a wide prior on wa and w0.
+    if wa < -2 or wa > 2:
         return -np.inf
-    #Prior w0 and wa combination so it is actually dark energy.
+    if w0 < -2 or w0 > 0:
+        return -np.inf
+    #Prior w0 and wa combination so it is actually dark energy at z=0.
     if w0+wa >= 0:
+        return -np.inf
+    if tszbias < 1e-2 or tszbias > 2:
         return -np.inf
     simulation = TSZHalo(tszbias=tszbias, w0=w0, wa=wa)
     #Compute the isw and tsz parameters
@@ -404,11 +408,43 @@ def lnprob(param, lvals, ISWtszdata, ISWtszCovar, ISWdata, ISWCovar, tszprior=0.
     #Compute cosmological correlation for each r-value in the data
     chisq  = np.sum((iswxtsz - ISWtszdata)**2/ISWtszCovar)
     chisq += np.sum((iswxisw - ISWdata)**2/ISWCovar)
-    chisq += np.sum((tszbias - tszprior)**2/tszwidth)
+    chisq += np.ones_like(iswxtsz)*(tszbias - tszprior)**2/tszwidth
+    return - np.log(chisq/2.)
+
+def lnprob_iswonly(param, lvals, ISWdata, ISWCovar):
+    """Likelihood function for emcee.
+        The tSZ data is included as a prior on the mass bias of the tSZ halos
+        param - vector of parameters.
+        param[0] = tszbias (priored)
+        param[1] = w0
+        param[2] = wa
+        rpar, rperp - r values for Cdata
+        rr - r-values for Cpeak and Csmooth
+        Cpeak - correlation function for the peak shape (mom, l, r)
+        Csmooth - correlation function for the smooth shape (mom, l, r)
+        where mom is integral xi_l (mu ^n * P L) for n = 0,1,2
+        Cdata - observed correlation functions (rpar, rperp)
+    """
+    w0 = param[0]
+    wa = param[1]
+    #Put a wide prior on wa.
+    if wa < -2 or wa > 2:
+        return -np.inf
+    if w0 < -2 or w0 > 0:
+        return -np.inf
+    #Prior w0 and wa combination so it is actually dark energy.
+    if w0+wa >= 0:
+        return -np.inf
+    simulation = TSZHalo(tszbias=0.8, w0=w0, wa=wa)
+    #Compute the isw and tsz parameters
+    iswxisw = np.array([simulation.crosscorr(l, simulation.isw_window_function_limber,simulation.isw_window_function_limber) for l in lvals])
+    #Interpolators for the smooth and peak correlation templates
+    #Compute cosmological correlation for each r-value in the data
+    chisq = np.sum((iswxisw - ISWdata)**2/ISWCovar)
     return - np.log(chisq/2.)
 
 if __name__ == "__main__":
-    ll = np.linspace(4,500, 80)
+    ll = np.linspace(8,1000, 80)
     ttisw = TSZHalo()
     tsztsz = np.array([ttisw.crosscorr(l, ttisw.tsz_window_function_limber,ttisw.tsz_window_function_limber) for l in ll])
     plt.loglog(ll, tsztsz, label="tSZ",ls="--")
@@ -431,13 +467,28 @@ if __name__ == "__main__":
 
     #Planck 2015 error on sigma_8
     tszbias, tszbiaserr = np.sqrt(0.77/0.82), 0.02
-    tszerr = 0.02/0.77*tszzz
+    tszerr = 0.02/0.77*np.abs(tsztsz)
+    assert np.all(tszerr > 0)
     #Very simple estimate: Planck detects at roughly 3 sigma
     iswerr = (iswisw/3.)**2
+    assert np.all(iswerr > 0)
     iswtszerr = np.sqrt(iswerr)*np.sqrt(tszerr)
     if len(sys.argv) > 1:
-        print("Starting sampler")
-        ndim, nwalkers = 3,100
+        print("Starting ISW sampler")
+        ndim, nwalkers = 2,10
+        p0 = [np.array([(-1.2+0.7)*np.random.random()-0.7, (-1.-0.7)*np.random.random()+0.7]) for _ in range(nwalkers)]
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob_iswonly, args=[ll, iswisw, iswerr])
+        #Do burn-in
+        pos, prob, state = sampler.run_mcmc(p0, 100)
+        sampler.reset()
+        print("Burn-in done")
+        #Do full sampling
+        sampler.run_mcmc(pos, 1000)
+        np.savetxt("chain-isw.txt", sampler.flatchain)
+        print("ISW Mean acceptance fraction: {0:.3f}".format(np.mean(sampler.acceptance_fraction)))
+
+        print("Starting cross-sampler")
+        ndim, nwalkers = 3,10
         p0 = [np.array([(2-0.4)*np.random.random()+0.4,(-1.2+0.7)*np.random.random()-0.7, (-1.-0.7)*np.random.random()+0.7]) for _ in range(nwalkers)]
         sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=[ll, iswtsz, iswtszerr, iswisw, iswerr, tszbias, tszbiaserr])
         #Do burn-in
@@ -447,3 +498,4 @@ if __name__ == "__main__":
         #Do full sampling
         sampler.run_mcmc(pos, 1000)
         np.savetxt("chain.txt", sampler.flatchain)
+        print("Mean acceptance fraction: {0:.3f}".format(np.mean(sampler.acceptance_fraction)))
