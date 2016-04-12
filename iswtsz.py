@@ -446,9 +446,9 @@ def lnprob_iswonly(param, lvals, ISWdata, ISWCovar):
 
 def do_sampling(likelihood, args, plow, phigh, title=""):
     """Wrapper function to do the sampling for a likelihood function."""
-    print(title+": Starting sampler")
-    ndim, nwalkers = np.size(plow),10
-    p0 = [np.array([[(ph-pl)*np.random.random()+pl for (ph,pl) in zip(phigh, plow)]]) for _ in range(nwalkers)]
+    ndim, nwalkers = len(plow),10
+    print(title+": Starting sampler:",ndim)
+    p0 = [np.array([(ph-pl)*np.random.random()+pl for (ph,pl) in zip(phigh, plow)]) for _ in range(nwalkers)]
     sampler = emcee.EnsembleSampler(nwalkers, ndim, likelihood, args=args, threads=5)
     #Do burn-in
     pos, _, _ = sampler.run_mcmc(p0, 100)
