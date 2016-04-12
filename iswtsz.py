@@ -451,7 +451,7 @@ def do_sampling(likelihood, args, plow, phigh, title=""):
     p0 = [np.array([[(ph-pl)*np.random.random()+pl for (ph,pl) in zip(phigh, plow)]]) for _ in range(nwalkers)]
     sampler = emcee.EnsembleSampler(nwalkers, ndim, likelihood, args=args, threads=5)
     #Do burn-in
-    pos, _, _ = sampler_isw.run_mcmc(p0, 100)
+    pos, _, _ = sampler.run_mcmc(p0, 100)
     sampler.reset()
     print(title+": Burn-in done")
     #Do full sampling
