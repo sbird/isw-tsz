@@ -10,6 +10,7 @@ import emcee #hammer
 import matplotlib
 matplotlib.use('PDF')
 import matplotlib.pyplot as plt
+import corner
 import halo_mass_function as hm
 import concentration
 
@@ -377,9 +378,9 @@ def lnprob(param, lvals, ISWtszdata, ISWtszCovar, ISWdata, ISWCovar, tszprior=0.
     """Likelihood function for emcee.
         The tSZ data is included as a prior on the mass bias of the tSZ halos
         param - vector of parameters.
-        param[0] = tszbias (priored)
-        param[1] = w0
-        param[2] = wa
+        param[0] = w0
+        param[1] = wa
+        param[2] = tszbias (priored)
         rpar, rperp - r values for Cdata
         rr - r-values for Cpeak and Csmooth
         Cpeak - correlation function for the peak shape (mom, l, r)
@@ -387,9 +388,9 @@ def lnprob(param, lvals, ISWtszdata, ISWtszCovar, ISWdata, ISWCovar, tszprior=0.
         where mom is integral xi_l (mu ^n * P L) for n = 0,1,2
         Cdata - observed correlation functions (rpar, rperp)
     """
-    tszbias = param[0]
-    w0 = param[1]
-    wa = param[2]
+    w0 = param[0]
+    wa = param[1]
+    tszbias = param[2]
     #Put a wide prior on wa and w0.
     if wa < -2 or wa > 2:
         return -np.inf
@@ -408,7 +409,7 @@ def lnprob(param, lvals, ISWtszdata, ISWtszCovar, ISWdata, ISWCovar, tszprior=0.
     #Compute cosmological correlation for each r-value in the data
     chisq  = np.sum((iswxtsz - ISWtszdata)**2/ISWtszCovar)
     chisq += np.sum((iswxisw - ISWdata)**2/ISWCovar)
-    chisq += np.ones_like(iswxtsz)*(tszbias - tszprior)**2/tszwidth
+    chisq += np.size(iswxtsz)*(tszbias - tszprior)**2/tszwidth
     return - np.log(chisq/2.)
 
 def lnprob_iswonly(param, lvals, ISWdata, ISWCovar):
@@ -443,59 +444,67 @@ def lnprob_iswonly(param, lvals, ISWdata, ISWCovar):
     chisq = np.sum((iswxisw - ISWdata)**2/ISWCovar)
     return - np.log(chisq/2.)
 
-if __name__ == "__main__":
-    ll = np.linspace(8,1000, 80)
-    ttisw = TSZHalo()
-    tsztsz = np.array([ttisw.crosscorr(l, ttisw.tsz_window_function_limber,ttisw.tsz_window_function_limber) for l in ll])
-    plt.loglog(ll, tsztsz, label="tSZ",ls="--")
-    iswisw = np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.isw_window_function_limber) for l in ll])
-    plt.loglog(ll, iswisw, label="ISW",ls="-.")
-    iswtsz = np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.tsz_window_function_limber) for l in ll])
-    plt.loglog(ll, iswtsz, label="ISW-tSZ",ls="-")
+def do_sampling(likelihood, args, plow, phigh, title=""):
+    """Wrapper function to do the sampling for a likelihood function."""
+    print(title+": Starting sampler")
+    ndim, nwalkers = np.size(plow),10
+    p0 = [np.array([[(ph-pl)*np.random.random()+pl for (ph,pl) in zip(phigh, plow)]]) for _ in range(nwalkers)]
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, likelihood, args=args, threads=5)
+    #Do burn-in
+    pos, _, _ = sampler_isw.run_mcmc(p0, 100)
+    sampler.reset()
+    print(title+": Burn-in done")
+    #Do full sampling
+    sampler.run_mcmc(pos, 1000)
+    np.savetxt("chain-"+title+".txt", sampler.flatchain)
+    print(title+": Mean acceptance fraction: {0:.3f}".format(np.mean(sampler.acceptance_fraction)))
+    corner.corner(sampler.flatchain, labels=[r"$w_0$", r"$w_\mathrm{a}$", r"$b_\mathrm{tSZ}$"])
+    plt.savefig(title+"chain.pdf")
+    plt.clf()
+    return sampler
+
+class FakeData(object):
+    """Create fake datasets for the ISW and ISWxtSZ data."""
+    def __init__(self, minl=8, maxl=1000, nmodes = 80):
+        ll = np.linspace(minl,maxl, nmodes)
+        ttisw = TSZHalo()
+        self.tsztsz = np.array([ttisw.crosscorr(l, ttisw.tsz_window_function_limber,ttisw.tsz_window_function_limber) for l in ll])
+        self.iswisw = np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.isw_window_function_limber) for l in ll])
+        self.iswtsz = np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.tsz_window_function_limber) for l in ll])
+        #Planck 2015 error on sigma_8
+        self.tszbias, self.tszbiaserr = np.sqrt(0.77/0.82), 0.02
+        self.tszerr = 0.02/0.77*np.abs(self.tsztsz)
+        assert np.all(self.tszerr > 0)
+        #Very simple estimate: Planck detects at roughly 3 sigma
+        self.iswerr = (self.iswisw/3.)**2
+        assert np.all(self.iswerr > 0)
+        self.iswtszerr = np.sqrt(self.iswerr)*np.sqrt(self.tszerr)
+        self.ttisw = ttisw
+        self.ll = ll
+
+def make_plots(itf):
+    """Plot the fake data for the ISW and tSZ effects"""
+    plt.loglog(itf.ll, itf.tsztsz, label="tSZ",ls="--")
+    plt.loglog(itf.ll, itf.iswisw, label="ISW",ls="-.")
+    plt.loglog(itf.ll, itf.iswtsz, label="ISW-tSZ",ls="-")
     plt.legend(loc=0)
     plt.savefig("ISWtsz.pdf")
     plt.clf()
     #Plot redshift dependence
     aaa = np.linspace(0.333, 1, 80)
-    tszzz = np.array([ttisw.tsz_window_function_limber(a, ttisw.kk_limber(100, a)) for a in aaa])
+    tszzz = np.array([itf.ttisw.tsz_window_function_limber(a, itf.ttisw.kk_limber(100, a)) for a in aaa])
     plt.plot(aaa, tszzz/np.min(tszzz), label="tSZ", ls="--")
-    iswzz = np.array([ttisw.isw_window_function_limber(a, ttisw.kk_limber(100, a)) for a in aaa])
+    iswzz = np.array([itf.ttisw.isw_window_function_limber(a, itf.ttisw.kk_limber(100, a)) for a in aaa])
     plt.plot(aaa, iswzz/np.min(iswzz), label="ISW")
     plt.legend(loc=0)
     plt.savefig("redshift.pdf")
     plt.clf()
 
+if __name__ == "__main__":
+    fake = FakeData()
     #Planck 2015 error on sigma_8
-    tszbias, tszbiaserr = np.sqrt(0.77/0.82), 0.02
-    tszerr = 0.02/0.77*np.abs(tsztsz)
-    assert np.all(tszerr > 0)
-    #Very simple estimate: Planck detects at roughly 3 sigma
-    iswerr = (iswisw/3.)**2
-    assert np.all(iswerr > 0)
-    iswtszerr = np.sqrt(iswerr)*np.sqrt(tszerr)
     if len(sys.argv) > 1:
-        print("Starting ISW sampler")
-        ndim, nwalkers = 2,10
-        p0 = [np.array([(-1.2+0.7)*np.random.random()-0.7, (-1.-0.7)*np.random.random()+0.7]) for _ in range(nwalkers)]
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob_iswonly, args=[ll, iswisw, iswerr])
-        #Do burn-in
-        pos, prob, state = sampler.run_mcmc(p0, 100)
-        sampler.reset()
-        print("Burn-in done")
-        #Do full sampling
-        sampler.run_mcmc(pos, 1000)
-        np.savetxt("chain-isw.txt", sampler.flatchain)
-        print("ISW Mean acceptance fraction: {0:.3f}".format(np.mean(sampler.acceptance_fraction)))
-
-        print("Starting cross-sampler")
-        ndim, nwalkers = 3,10
-        p0 = [np.array([(2-0.4)*np.random.random()+0.4,(-1.2+0.7)*np.random.random()-0.7, (-1.-0.7)*np.random.random()+0.7]) for _ in range(nwalkers)]
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=[ll, iswtsz, iswtszerr, iswisw, iswerr, tszbias, tszbiaserr])
-        #Do burn-in
-        pos, prob, state = sampler.run_mcmc(p0, 100)
-        sampler.reset()
-        print("Burn-in done")
-        #Do full sampling
-        sampler.run_mcmc(pos, 1000)
-        np.savetxt("chain.txt", sampler.flatchain)
-        print("Mean acceptance fraction: {0:.3f}".format(np.mean(sampler.acceptance_fraction)))
+        sampler_isw = do_sampling(lnprob_iswonly, args=[fake.ll, fake.iswisw, fake.iswerr], plow=[-2,-2], phigh=[0,2],title="ISW")
+        sampler_tszisw = do_sampling(lnprob, args=[fake.ll, fake.iswtsz, fake.iswtszerr, fake.iswisw, fake.iswerr, fake.tszbias, fake.tszbiaserr], plow=[-2,-2,0.6], phigh=[0,2,1.2],title="ISWtSZ")
+    else:
+        make_plots(fake)
