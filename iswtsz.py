@@ -262,7 +262,7 @@ class TSZHalo(object):
         Rs = R200/conc
         ls = self.lingrowth.angular_diameter(aa) / Rs
         #Cutoff when the integrand becomes oscillatory.
-        limit = 2*math.pi*ls/ll
+        limit = math.pi*ls/ll
         integrated,err = scipy.integrate.quad(self._ygas3d_integrand, 0, limit, (ll/ls, ygas))
         if err/integrated > 0.1:
             raise RuntimeError("Err in tsz integral: ",err, integrated)
