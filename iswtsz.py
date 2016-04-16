@@ -378,20 +378,46 @@ class TSZHalo(object):
             raise RuntimeError("Err in C_l computation: ",err)
         return (lmode*(lmode+1))/2/math.pi*cll
 
-    def tszzweighted(self):
+    def tszzweighted(self, ll):
         """Find the weighted mean redshift of the tSZ integral"""
+        normfunc = lambda aa: self.tsz_2h_window_function_limber(aa, ll)/((1e-12+self.lingrowth.angular_diameter(aa))*self.lingrowth.hzoverh0(aa))/aa**2
+        (norm, err) = scipy.integrate.quad(normfunc, 0.333, 1)
+        if err / (norm+0.01) > 0.1:
+            raise RuntimeError("Err in C_l computation: ",err)
+        zfunc = lambda aa: (1/aa-1)*normfunc(aa)
+        (tot, err) = scipy.integrate.quad(zfunc, 0.333, 1)
+        if err / (tot+0.01) > 0.1:
+            raise RuntimeError("Err in C_l computation: ",err)
+        assert 0.333 < tot/norm < 1.
+        return tot/norm
+
+    def dClbydeps(self,ll, meanz=-1):
+        """Find the derivative of C_l by the small epsilon redshift parameter."""
+        if meanz < 0:
+            meanz = self.tszzweighted(ll)
+        integrand = lambda aa: (1/aa-1-meanz)*self._crosscorr_integrand(aa, ll, self.tsz_2h_window_function_limber, self.isw_window_function_limber)
+        (cll, err) = scipy.integrate.quad(integrand, 0.333, 1)
+        if err / (cll+0.01) > 0.1:
+            raise RuntimeError("Err in C_l computation: ",err)
+        return (ll*(ll+1))/(2*math.pi)*cll
 
 def make_plots():
     """Plot the fake data for the ISW and tSZ effects"""
-    ll = np.linspace(4,100, 80)
+    maxl = 100
+    ll = np.linspace(4,maxl, 40)
     ttisw = TSZHalo()
     tsztsz = np.array([ttisw.crosscorr(l, ttisw.tsz_2h_window_function_limber,ttisw.tsz_2h_window_function_limber) for l in ll])
     iswisw = np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.isw_window_function_limber) for l in ll])
     iswtsz = np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.tsz_2h_window_function_limber) for l in ll])
-    plt.loglog(ll, tsztsz, label="tSZ",ls="--")
+    tsz1h = np.array([ttisw.tsz_1h_limber(l) for l in ll])
+    plt.loglog(ll, tsztsz, label="tSZ 2h",ls="--")
     plt.loglog(ll, iswisw, label="ISW",ls="-.")
     plt.loglog(ll, iswtsz, label="ISW-tSZ",ls="-")
+    plt.loglog(ll, tsz1h, labek="tSZ 1h", ls=":")
     plt.legend(loc=0)
+    plt.xlim(4,maxl)
+    plt.xlabel("l")
+    plt.ylabel(r"$(l (l+1) / (2\pi) ) C_\mathrm{l}$")
     plt.savefig("ISWtsz.pdf")
     plt.clf()
     #Plot redshift dependence
@@ -405,8 +431,22 @@ def make_plots():
     iswnorm = np.trapz(iswzz, 1/aaa-1.)
     plt.plot(1/aaa-1., -iswzz/iswnorm, label="ISW")
     plt.legend(loc=0)
+    plt.xlabel("z")
+    plt.ylabel(r"$\Delta_l(z)/(r(z) H(z))^{1/2}$")
     plt.savefig("redshift.pdf")
     plt.clf()
+    #Plot the mean redshift as a function of l
+    meanz = np.array([ttisw.tszzweighted(l) for l in ll])
+    Clbyeps = np.array([ttisw.dClbydeps(l, meanz) for l,z0 in zip(ll,meanz)])
+    plt.plot(ll, meanz, ls='--',label=r"$z_0$")
+    plt.plot(ll, Clbyeps, ls='-',label=r"$dC_l/d\epsilon$")
+    plt.legend(loc=0)
+    plt.xlabel("l")
+    plt.ylabel(r"$(l (l+1) / (2\pi) ) C_\mathrm{l}$")
+    plt.savefig("meanz.pdf")
+    plt.clf()
+    np.savetxt("meanz.txt",meanz)
+    np.savetxt("Clbyeps.txt",Clbyeps)
 
 if __name__ == "__main__":
     #Planck 2015 error on sigma_8
