@@ -399,7 +399,7 @@ class TSZHalo(object):
         """Find the derivative of C_l by the small epsilon redshift parameter."""
         if meanz < 0:
             meanz = self.tszzweighted(ll)
-        integrand = lambda aa: (1/aa-1-meanz)*self._crosscorr_integrand(aa, ll, self.tsz_2h_window_function_limber, self.isw_window_function_limber)
+        integrand = lambda aa: (1/aa-1-meanz)*self._crosscorr_integrand(aa, ll)*self.tsz_2h_window_function_limber(aa,ll)*self.isw_window_function_limber(aa,ll)
         (cll, err) = scipy.integrate.quad(integrand, 0.333, 1)
         if err / (cll+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
@@ -417,7 +417,7 @@ def make_plots():
     plt.loglog(ll, tsztsz, label="tSZ 2h",ls="--")
     plt.loglog(ll, iswisw, label="ISW",ls="-.")
     plt.loglog(ll, iswtsz, label="ISW-tSZ",ls="-")
-    plt.loglog(ll, tsz1h, labek="tSZ 1h", ls=":")
+    plt.loglog(ll, tsz1h, label="tSZ 1h", ls=":")
     plt.legend(loc=0)
     plt.xlim(4,maxl)
     plt.xlabel("l")
