@@ -203,7 +203,7 @@ class TSZHalo(object):
         c = 1.19
         return A * ( np.power((sigma / b), -a) + 1) * np.exp(-1 * c / sigma / sigma)
 
-    def dndm_z_b(self, mass, aa):
+    def dndm_z_b(self, mass, aa, bias=True):
         """Returns the halo mass function dn/dM in units of h^4 M_sun^-1 Mpc^-3
         Requires mass in units of M_sun /h
         (times by a halo bias)"""
@@ -217,22 +217,9 @@ class TSZHalo(object):
         dlogsigma = self.overden.log_sigmaof_M(mass)*growth/mass
         #We have dn / dM = - d ln sigma /dM rho_0/M f(sigma)
         dndM = - dlogsigma*mass_func/mass*rhom
-        nu = 1.686/sigma
-        return dndM * self.bias(nu)
-
-    def dndm_z(self, mass, aa):
-        """Returns the halo mass function dn/dM in units of h^4 M_sun^-1 Mpc^-3
-        Requires mass in units of M_sun /h"""
-        # Mean matter density at redshift z in units of h^2 Msolar/Mpc^3
-        # This is the comoving density at redshift z in units of h^-1 M_sun (Mpc/h)^-3 (comoving)
-        # Compute as a function of the critical density at z=0.
-        rhom = self.overden.rhocrit(0) * self.omegam0
-        growth = self.lingrowth.lingrowthfac(aa)
-        sigma = self.overden.sigmaof_M(mass)*growth
-        mass_func = self.mass_function(sigma)
-        dlogsigma = self.overden.log_sigmaof_M(mass)*growth/mass
-        #We have dn / dM = - d ln sigma /dM rho_0/M f(sigma)
-        dndM = - dlogsigma*mass_func/mass*rhom
+        if bias:
+            nu = 1.686/sigma
+            dndM *= self.bias(nu)
         return dndM
 
     def concentration(self,mass, aa):
@@ -262,25 +249,16 @@ class TSZHalo(object):
         Rs = R200/conc
         ls = self.lingrowth.angular_diameter(aa) / Rs
         #Cutoff when the integrand becomes oscillatory.
-        limit = math.pi*ls/ll
-        integrated,err = scipy.integrate.quad(self._ygas3d_integrand, 0, limit, (ll/ls, ygas))
+        limit = 2*math.pi*ls/ll
+        #Integrand of the TSZ profile from Komatsu & Seljak 2002 eq. 2.
+        #Units are 1/Mpc. Takes dimensionless r/Rs and dimensionless l/ls
+        #The bessel function does little unless k is large.
+        integrand = lambda xx: ygas.y3d(xx) * xx * xx * scipy.special.j0(xx*ll/ls)
+        integrated,err = scipy.integrate.quad(integrand, 0, limit)
         if err/integrated > 0.1:
             raise RuntimeError("Err in tsz integral: ",err, integrated)
-        #For large k the integrand becomes oscillatory and is exponentially suppressed.
-        #So approximate it to save breaking the integrator.
-        #This is computed by doing a contour integral and taking a (very bad) upper bound for the y_gas part.
-        #Use a bad approximation as zero is actually not bad either.
-#         if conc > limit:
-#             integrated += ygas.y3d(limit) * (limit * np.exp(-limit * redk)-conc * np.exp(-conc * redk))/redk**2
         #Units:  dimensionless
         return 4 * math.pi * Rs * integrated / ls**2
-
-    def _ygas3d_integrand(self, xx, llls, ygas):
-        """Integrand of the TSZ profile from Komatsu & Seljak 2002 eq. 2.
-        Units are 1/Mpc. Takes dimensionless r/Rs and dimensionless k = k * Rs"""
-        #The bessel function does little unless k is large.
-        integrand = ygas.y3d(xx) * xx * xx
-        return scipy.special.j0(xx*llls) * integrand
 
     def bias(self,nu):
         """Formula for the bias of a halo, from Sheth-Tormen 1999."""
@@ -288,50 +266,36 @@ class TSZHalo(object):
         bhalo = (1 + (0.707*nu**2 -1)/ delta_c) + 2 * 0.3 * delta_c / (1 + (0.707 * nu**2)**0.3)
         return bhalo
 
-    def tsz_2h_mass_integral(self, aa, ll, mass=(1e12, 1e16)):
+    def tsz_mass_integral(self, aa, ll, mass=(1e12, 1e16), twoh=True):
         """Formula for the mass integral of the tSZ power, Taburet 2010, 1012.5036.
         Units of h/Mpc"""
-        (integrated, err) = scipy.integrate.quad(self._tsz_2h_mass_integrand, np.log(mass[0]), np.log(mass[1]), (aa, ll))
+        integrand = lambda lmass: self._tsz_mass_integrand(np.exp(lmass), aa, ll, twoh=twoh)
+        (integrated, err) = scipy.integrate.quad(integrand, np.log(mass[0]), np.log(mass[1]))
         if err/(integrated+0.01) > 0.1:
             raise RuntimeError("Err in tsz mass integral: ",err," total:",integrated)
         return integrated
 
-    def _tsz_2h_mass_integrand(self, logM, aa, ll):
+    def _tsz_mass_integrand(self, MM, aa, ll,twoh=True):
         """Integrand for the tSZ mass integral. Units of 1/Mpc^3"""
-        MM = np.exp(logM)
         yl = self.tsz_per_halo(MM, aa, ll)
-        dndm_b = self.dndm_z_b(MM, aa)
+        dndm_b = self.dndm_z_b(MM, aa, bias=twoh)
         #Units: Msun/h      (Mpc/h)-3/(Msun/h)
-        return MM * yl * dndm_b * self.hubble**3
-
-    def tsz_1h_mass_integral(self, aa, ll, mass=(1e12, 1e16)):
-        """Formula for the mass integral of the tSZ power, Taburet 2010, 1012.5036.
-        Units of h/Mpc"""
-        (integrated, err) = scipy.integrate.quad(self._tsz_1h_mass_integrand, np.log(mass[0]), np.log(mass[1]), (aa, ll))
-        if err/(integrated+0.01) > 0.1:
-            raise RuntimeError("Err in tsz mass integral: ",err," total:",integrated)
-        return integrated
-
-    def _tsz_1h_mass_integrand(self, logM, aa, ll):
-        """Integrand for the tSZ mass integral. Units of 1/Mpc^3"""
-        MM = np.exp(logM)
-        yl = self.tsz_per_halo(MM, aa, ll)
-        dndm = self.dndm_z(MM, aa)
-        #Units: Msun/h      (Mpc/h)-3/(Msun/h)
-        return MM * yl**2 * dndm * self.hubble**3
+        integrand = MM * yl * dndm_b * self.hubble**3
+        if not twoh:
+            integrand *= yl
+        return integrand
 
     def tsz_2h_window_function_limber(self, aa, ll):
         """The 2-halo window function for the tSZ that appears in the C_l if we use the Limber approximation.
         This gets rid of the spherical bessels."""
         rr = self.lingrowth.angular_diameter(aa)
         Dplus = self.lingrowth.lingrowthfac(aa)
-        kk = (ll +1/2)/ rr
-        Tmass = self.tsz_2h_mass_integral(aa, kk)
+        Tmass = self.tsz_mass_integral(aa, ll,twoh=True)
         return Tmass * Dplus * rr
 
     def _tsz_1h_integrand(self, aa, ll):
         """The 1-halo integrand for the tSZ in the Limber approximation"""
-        Tmass = self.tsz_1h_mass_integral(aa, ll)
+        Tmass = self.tsz_mass_integral(aa, ll,twoh=False)
         rr = self.lingrowth.angular_diameter(aa)
         return self.light / self.H0 / self.lingrowth.hzoverh0(aa) * Tmass * rr**2 /aa**2
 
@@ -348,23 +312,21 @@ class TSZHalo(object):
         #d/da (D+/a) = D+' / a - D+ / a^2
         #5/2 omega_M / (H^2 a^4) + D+ /a ( H'/H - 1 /a)
         #Zero if H  = omega_M a^-3/2, D+ ~ a as H'/H ~ -3/2 / a
-        Dplusda = aa**2 * self.lingrowth.Dplusda(aa)
+        Dplusda = - aa**2 * self.lingrowth.Dplusda(aa)
         rr = self.lingrowth.angular_diameter(aa)
         #Units:                 Mpc^-2
         return 3 * self.H0**3 / self.light**3 * self.omegam0 / ll**2 * rr * Dplusda * self.lingrowth.hzoverh0(aa)
 
     def _crosscorr_integrand(self, aa, lmode):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
-        #Units of rr are Mpc.
-        rr = self.lingrowth.angular_diameter(aa)
         #This is the Limber approximation: 1/Mpc
-        kk = (lmode + 1/2) / rr
+        kk = self.kk_limber(aa, lmode)
         #Convert k into h/Mpc and convert the result from (Mpc/h)**3 to Mpc**3
         PofKMpc = self.overden.PofK(kk/self.hubble) * self.hubble**3
         #Functions are 1/Mpc**2
         return PofKMpc *self.light / self.H0 / self.lingrowth.hzoverh0(aa)/aa**2
 
-    def kk_limber(self, lmode, aa):
+    def kk_limber(self, aa, lmode):
         """Compute the k-mode value for a given l in the limber approximation."""
         rr = self.lingrowth.angular_diameter(aa)
         #This is the Limber approximation
@@ -424,14 +386,15 @@ def make_plots():
     plt.ylabel(r"$(l (l+1) / (2\pi) ) C_\mathrm{l}$")
     plt.savefig("ISWtsz.pdf")
     plt.clf()
+    print("Done ISW tSZ")
     #Plot redshift dependence
     aaa = np.linspace(0.333, 1, 80)
     #Multiply by sqrt(r*H)
     rrHz = lambda aa : (1e-12+ttisw.lingrowth.angular_diameter(aa))*ttisw.lingrowth.hzoverh0(aa)
-    tszzz = np.array([ttisw.tsz_2h_window_function_limber(a, ttisw.kk_limber(100, a))/np.sqrt(rrHz(a)) for a in aaa])
+    tszzz = np.array([ttisw.tsz_2h_window_function_limber(a, 100)/np.sqrt(rrHz(a)) for a in aaa])
     tsznorm = np.trapz(tszzz, 1/aaa-1.)
     plt.plot(1/aaa-1., -tszzz/tsznorm, label="tSZ", ls="--")
-    iswzz = np.array([ttisw.isw_window_function_limber(a, ttisw.kk_limber(100, a))/np.sqrt(rrHz(a)) for a in aaa])
+    iswzz = np.array([ttisw.isw_window_function_limber(a, 100)/np.sqrt(rrHz(a)) for a in aaa])
     iswnorm = np.trapz(iswzz, 1/aaa-1.)
     plt.plot(1/aaa-1., -iswzz/iswnorm, label="ISW")
     plt.legend(loc=0)
