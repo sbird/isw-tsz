@@ -353,7 +353,7 @@ class TSZHalo(object):
         #Units:                 Mpc^-2
         return 3 * self.H0**3 / self.light**3 * self.omegam0 / ll**2 * rr * Dplusda * self.lingrowth.hzoverh0(aa)
 
-    def _crosscorr_integrand(self, aa, lmode, func1, func2):
+    def _crosscorr_integrand(self, aa, lmode):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
         #Units of rr are Mpc.
         rr = self.lingrowth.angular_diameter(aa)
@@ -361,8 +361,8 @@ class TSZHalo(object):
         kk = (lmode + 1/2) / rr
         #Convert k into h/Mpc and convert the result from (Mpc/h)**3 to Mpc**3
         PofKMpc = self.overden.PofK(kk/self.hubble) * self.hubble**3
-        #Functions are dimensionless, so this needs to be dimensionless too.
-        return func1(aa, lmode) * func2(aa,lmode) * PofKMpc *self.light / self.H0 / self.lingrowth.hzoverh0(aa)/aa**2
+        #Functions are 1/Mpc**2
+        return PofKMpc *self.light / self.H0 / self.lingrowth.hzoverh0(aa)/aa**2
 
     def kk_limber(self, lmode, aa):
         """Compute the k-mode value for a given l in the limber approximation."""
@@ -371,9 +371,13 @@ class TSZHalo(object):
         kk = (lmode + 1/2) / (rr+1e-12)
         return kk
 
-    def crosscorr(self, lmode, func1, func2):
+    def crosscorr(self, lmode, func1, func2=None):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
-        (cll, err) = scipy.integrate.quad(self._crosscorr_integrand, 0.333, 1, (lmode, func1, func2))
+        if func2 != None:
+            integrand = lambda aa: func2(aa,lmode) * func1(aa, lmode)*self._crosscorr_integrand(aa, lmode)
+        else:
+            integrand = lambda aa: func1(aa,lmode)**2 * self._crosscorr_integrand(aa, lmode)
+        (cll, err) = scipy.integrate.quad(integrand, 0.333, 1)
         if err / (cll+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
         return (lmode*(lmode+1))/2/math.pi*cll
@@ -406,10 +410,10 @@ def make_plots():
     maxl = 100
     ll = np.linspace(4,maxl, 40)
     ttisw = TSZHalo()
-    tsztsz = np.array([ttisw.crosscorr(l, ttisw.tsz_2h_window_function_limber,ttisw.tsz_2h_window_function_limber) for l in ll])
-    iswisw = np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.isw_window_function_limber) for l in ll])
-    iswtsz = np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.tsz_2h_window_function_limber) for l in ll])
     tsz1h = np.array([ttisw.tsz_1h_limber(l) for l in ll])
+    tsztsz = np.array([ttisw.crosscorr(l, ttisw.tsz_2h_window_function_limber) for l in ll])
+    iswisw = np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber) for l in ll])
+    iswtsz = np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.tsz_2h_window_function_limber) for l in ll])
     plt.loglog(ll, tsztsz, label="tSZ 2h",ls="--")
     plt.loglog(ll, iswisw, label="ISW",ls="-.")
     plt.loglog(ll, iswtsz, label="ISW-tSZ",ls="-")
