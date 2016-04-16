@@ -229,11 +229,11 @@ class TSZHalo(object):
         return self.conc_model.comoving_concentration(nu, zz)
 
     def R200(self, mass):
-        """Get the virial radius in comoving Mpc/h for a given mass in Msun/h"""
+        """Get the virial radius in comoving Mpc for a given mass in Msun/h"""
         #Units are Msun  h^2 / Mpc^3
         rhoc = self._rhocrit0
         #Virial radius R200 in Mpc/h from the virial mass
-        return np.cbrt(3 * mass / (4* math.pi* 200 * rhoc))
+        return np.cbrt(3 * mass / (4* math.pi* 200 * rhoc)) / self.hubble
 
     def tsz_per_halo(self, M, aa,ll):
         """The 2D fourier transform of the projected Compton y-parameter, per halo.
@@ -242,21 +242,20 @@ class TSZHalo(object):
         #Upper limit is the virial radius.
         conc = self.concentration(M, aa)
         #Get rid of factor of h
-        R200 = self.R200(M)/self.hubble
         rhogas_cos = (self.omegab0  / self.omegam0) * 200 * self._rhocrit0
-        ygas = YYgas(conc, M/self.hubble, rhogas_cos*self.hubble**2, R200, tszbias=self.tszbias)
+        ygas = YYgas(conc, M/self.hubble, rhogas_cos*self.hubble**2, self.R200(M), tszbias=self.tszbias)
         #Also no factor of h
-        Rs = R200/conc
-        ls = self.lingrowth.angular_diameter(aa) / Rs
+        Rs = self.R200(M)/conc
+        ls = (1e-12+self.lingrowth.angular_diameter(aa)) / Rs
         #Cutoff when the integrand becomes oscillatory.
-        limit = 2*math.pi*ls/ll
+        limit = conc #60*math.pi*ls/ll
         #Integrand of the TSZ profile from Komatsu & Seljak 2002 eq. 2.
         #Units are 1/Mpc. Takes dimensionless r/Rs and dimensionless l/ls
-        #The bessel function does little unless k is large.
+        #The bessel function does little unless l is large.
         integrand = lambda xx: ygas.y3d(xx) * xx * xx * scipy.special.j0(xx*ll/ls)
         integrated,err = scipy.integrate.quad(integrand, 0, limit)
-        if err/integrated > 0.1:
-            raise RuntimeError("Err in tsz integral: ",err, integrated)
+#         if err/integrated > 0.1:
+#             raise RuntimeError("Err in tsz integral: ",err, integrated)
         #Units:  dimensionless
         return 4 * math.pi * Rs * integrated / ls**2
 
@@ -354,7 +353,7 @@ class TSZHalo(object):
         (tot, err) = scipy.integrate.quad(zfunc, 0.333, 1)
         if err / (tot+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
-        assert 0.333 < tot/norm < 1.
+        assert 0 <= tot/norm < 2.5
         return tot/norm
 
     def dClbydeps(self,ll, meanz=-1):
@@ -369,7 +368,7 @@ class TSZHalo(object):
 
 def make_plots():
     """Plot the fake data for the ISW and tSZ effects"""
-    maxl = 100
+    maxl = 400
     ll = np.linspace(4,maxl, 40)
     ttisw = TSZHalo()
     tsz1h = np.array([ttisw.tsz_1h_limber(l) for l in ll])
@@ -382,37 +381,44 @@ def make_plots():
     plt.loglog(ll, tsz1h, label="tSZ 1h", ls=":")
     plt.legend(loc=0)
     plt.xlim(4,maxl)
-    plt.xlabel("l")
+    plt.xlabel("$l$")
     plt.ylabel(r"$(l (l+1) / (2\pi) ) C_\mathrm{l}$")
     plt.savefig("ISWtsz.pdf")
     plt.clf()
     print("Done ISW tSZ")
     #Plot redshift dependence
-    aaa = np.linspace(0.333, 1, 80)
+    aaa = np.linspace(0.333, 0.99, 80)
     #Multiply by sqrt(r*H)
     rrHz = lambda aa : (1e-12+ttisw.lingrowth.angular_diameter(aa))*ttisw.lingrowth.hzoverh0(aa)
-    tszzz = np.array([ttisw.tsz_2h_window_function_limber(a, 100)/np.sqrt(rrHz(a)) for a in aaa])
+    tszzz = np.array([ttisw.tsz_2h_window_function_limber(a, 10)/np.sqrt(rrHz(a)) for a in aaa])
     tsznorm = np.trapz(tszzz, 1/aaa-1.)
-    plt.plot(1/aaa-1., -tszzz/tsznorm, label="tSZ", ls="--")
-    iswzz = np.array([ttisw.isw_window_function_limber(a, 100)/np.sqrt(rrHz(a)) for a in aaa])
+    plt.semilogy(1/aaa-1., -tszzz/tsznorm, label="tSZ", ls="--")
+    iswzz = np.array([ttisw.isw_window_function_limber(a, 10)/np.sqrt(rrHz(a)) for a in aaa])
     iswnorm = np.trapz(iswzz, 1/aaa-1.)
-    plt.plot(1/aaa-1., -iswzz/iswnorm, label="ISW")
+    plt.semilogy(1/aaa-1., -iswzz/iswnorm, label="ISW")
     plt.legend(loc=0)
     plt.xlabel("z")
     plt.ylabel(r"$\Delta_l(z)/(r(z) H(z))^{1/2}$")
+    plt.xlim(0,2)
     plt.savefig("redshift.pdf")
     plt.clf()
+    print("Done redshift")
     #Plot the mean redshift as a function of l
     meanz = np.array([ttisw.tszzweighted(l) for l in ll])
-    Clbyeps = np.array([ttisw.dClbydeps(l, meanz) for l,z0 in zip(ll,meanz)])
     plt.plot(ll, meanz, ls='--',label=r"$z_0$")
-    plt.plot(ll, Clbyeps, ls='-',label=r"$dC_l/d\epsilon$")
     plt.legend(loc=0)
-    plt.xlabel("l")
-    plt.ylabel(r"$(l (l+1) / (2\pi) ) C_\mathrm{l}$")
+    plt.xlabel("$l$")
+    plt.ylabel(r"$z_0$")
     plt.savefig("meanz.pdf")
     plt.clf()
     np.savetxt("meanz.txt",meanz)
+    Clbyeps = np.array([ttisw.dClbydeps(l, z0) for l,z0 in zip(ll,meanz)])
+    plt.plot(ll, Clbyeps, ls='-',label=r"$dC_l/d\epsilon$")
+    plt.legend(loc=0)
+    plt.xlabel("$l$")
+    plt.ylabel(r"$(l (l+1) / (2\pi) ) C_\mathrm{l}$")
+    plt.savefig("Clbyeps.pdf")
+    plt.clf()
     np.savetxt("Clbyeps.txt",Clbyeps)
 
 if __name__ == "__main__":
