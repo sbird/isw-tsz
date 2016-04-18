@@ -323,7 +323,8 @@ redshift $z$ and is given in terms of the electron pressure
 profile $P_e(M,z;x)$, as a function of scale radius $x$ in the
 cluster, for example, in Eq.~(A.5) in Ref.~\cite{Aghanim:2015eva}.
 We use for our numerical work the electron-pressure profiles of
-Ref.~\cite{Komatsu:2002wc}.
+Ref.~\cite{Komatsu:2002wc}. We assume the halo mass function 
+of~\cite{Tinker:2008ff} and the halo bias of~\cite{Sheth:1999mn}
 
 The ``2h'' superscript in the
 $y$-parameter power spectrum indicates that this is the
@@ -357,12 +358,11 @@ cross-correlation is
 \end{equation}
 
 \begin{figure}[h]
-%\includegraphics[width=10 cm, height = 7 cm]{CL.png}
-\caption{The $y,2h$ and ISW power spectrum, along with the
-     $y,2h$-$ISW$ cross correlation are drawn in solid lines,
-     while the $y, 1h$ is dotted. The corresponding early
-     universe power spectra are shown in dashed lines. We place
-     the CMB power spectrum for comparison.} 
+\includegraphics[width=10 cm, height = 7 cm]{ISWtsz.pdf}
+    \caption{The $y,2h$ (blue) and ISW (green) power spectra 
+     are shown in dashed lines, while the $y,2h$-$ISW$ cross 
+     correlation is in solid red. The $y, 1h$ is dotted. 
+     The CMB power spectrum is shown dot-dashed for comparison.} 
 \label{fig:power}
 \end{figure}
 
@@ -424,7 +424,7 @@ normalize the curves in Fig.~\ref{fig:Deltas} to both have the
 same area under the curve.
 
 \begin{figure}[h]
-%\includegraphics[width=10 cm, height = 7 cm]{CL.png}
+\includegraphics[width=10 cm, height = 7 cm]{redshift.pdf}
 \caption{We plot the transfer functions $\Delta_l^{\rm isw}(z)$
      and $\Delta_l^y(z)$, divided by $[r(z)H(z)]^{1/2}$. The
      squares of the plotted quantities are the redshift ($z$)
@@ -461,7 +461,7 @@ To see how this might work, we replace
 where
 \begin{equation}
      z_0 = \frac{ \int \frac{dz}{r(z)H(z)} z \Delta_l^y(z)}
-     { \int \frac{dz}{r(z)H(z)} \Delta_l^y(z)} \simeq ????.
+     { \int \frac{dz}{r(z)H(z)} \Delta_l^y(z)} \simeq 0.04\left(\frac{l}{100}\right).
 \label{eqn:z0}     
 \end{equation}
 The functional form in Eq.~(\ref{eqn:replacement}), is chosen so
@@ -471,6 +471,14 @@ for small $\epsilon$.  This alteration thus describes, for
 $\epsilon>0$, a weighting of the Compton-$y$ distribution to
 smaller redshifts (and {\it vice versa} for $\epsilon<0$) in
 such a way that leaves the total $y$ signal unchanged.
+
+\begin{figure}[h]
+\includegraphics[width=10 cm, height = 7 cm]{Clbyeps.pdf}
+    \caption{The derivative of the ISW-tSZ cross-correlation by $\epsilon$, 
+    $\partial C_l^{yT}/\partial \epsilon$ (solid blue) and the ISW-tSZ 
+    noise, $\sigma_l^{yT}$ (dashed green).} 
+\label{fig:clderiv}
+\end{figure}
 
 We now estimate the smallest value $\sigma_\epsilon$ of
 $\epsilon$ that will be detectable with future measurements.
@@ -486,6 +494,12 @@ where
      (z-z_0) P(l/r).
 \label{eqn:Clderiv}
 \end{equation}
+Figure~\ref{fig:clderiv} shows $\partial C_l^{yT}/\partial \epsilon$ and $\left(\sigma_l^{yT}\right)^2$.
+We estimate the noise using~\cite{Taburet:2010hb}
+\begin{equation}
+    \left(\sigma_l^{yT}\right)^2 = \left[C_l^{ISW-tSZ}\right]^2 + (C_l^{ISW} C_l^{CMB}) C_l^{yy}
+\end{equation}
+The final constraint is $\sigma_\epsilon \approx 21$.
 
 \section{Primordial Non-Gaussianity}
 
@@ -801,12 +815,15 @@ Simons Foundation.
   %%CITATION = %doi:10.1046/j.1365-8711.2002.05889.x;%%
   %265 citations counted in INSPIRE as of 15 Apr 2016
 
-
-\end{thebibliography}
-
-\end{document}
-
-
+%\cite{Tinker:2008ff}
+\bibitem{Tinker:2008ff} 
+  J.~L.~Tinker {\it et al.},
+  %``Toward a halo mass function for precision cosmology: The Limits of universality,''
+  Astrophys.\ J.\  {\bf 688}, 709 (2008)
+%  doi:10.1086/591439
+  [arXiv:0803.2706 [astro-ph]].
+  %%CITATION = doi:10.1086/591439;%%
+  %623 citations counted in INSPIRE as of 26 Feb 2016
 
 %\cite{Sheth:1999mn}
 \bibitem{Sheth:1999mn} 
@@ -817,6 +834,13 @@ Simons Foundation.
   [astro-ph/9901122].
   %%CITATION = %doi:10.1046/j.1365-8711.1999.02692.x;%%
   %1524 citations counted in INSPIRE as of 15 Apr 2016
+
+
+\end{thebibliography}
+
+\end{document}
+
+
 
 
 %\cite{Bryan:1997dn}
