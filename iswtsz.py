@@ -427,7 +427,7 @@ def make_plots():
     plt.savefig("meanz.pdf")
     plt.clf()
     np.savetxt("meanz.txt",meanz)
-    noise = (tsz1h + tsztsz)*(iswisw + cmb)+iswtsz**2
+    noise = ((tsz1h + tsztsz)*(iswisw + cmb)+iswtsz**2)/(2*ll+1)
     Clbyeps = cmboutputscale*np.array([ttisw.dClbydeps(l, z0) for l,z0 in zip(ll,meanz)])
     plt.loglog(ll, Clbyeps, ls='-',label=r"$dC_l/d\epsilon$")
     plt.loglog(ll, noise, ls='--',label=r"$\sigma_l^{yT}$")
