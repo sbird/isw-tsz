@@ -426,7 +426,7 @@ same area under the curve.
 \begin{figure}[h]
 \includegraphics[width=10 cm, height = 7 cm]{redshift.pdf}
 \caption{We plot the transfer functions $\Delta_l^{\rm isw}(z)$
-     and $\Delta_l^y(z)$, divided by $[r(z)H(z)]^{1/2}$. The
+     and $\Delta_l^y(z)$, divided by $[r(z)H(z)]^{1/2}$, at $l=20$. The
      squares of the plotted quantities are the redshift ($z$)
      integrands for the ISW power spectrum $C_l^{\rm isw}$ and
      the two-halo contribution to the tSZ power spectrum
@@ -476,7 +476,9 @@ such a way that leaves the total $y$ signal unchanged.
 \includegraphics[width=10 cm, height = 7 cm]{Clbyeps.pdf}
     \caption{The derivative of the ISW-tSZ cross-correlation by $\epsilon$, 
     $\partial C_l^{yT}/\partial \epsilon$ (solid blue) and the ISW-tSZ 
-    noise, $\sigma_l^{yT}$ (dashed green).} 
+    noise, $\sigma_l^{yT}$ (dashed green). We also show the same quantities 
+    restricting to $z>0.3$ (solid red and dashed cyan, respectively), 
+    which substantially increases the signal-to-noise.} 
 \label{fig:clderiv}
 \end{figure}
 
@@ -498,8 +500,19 @@ Figure~\ref{fig:clderiv} shows $\partial C_l^{yT}/\partial \epsilon$ and $\left(
 We estimate the noise using~\cite{Taburet:2010hb}
 \begin{equation}
     \left(\sigma_l^{yT}\right)^2 = \frac{1}{2 l +1} \left(\left[C_l^{ISW-tSZ}\right]^2 + (C_l^{ISW} + C_l^{CMB}) C_l^{yy}\right)
+    \label{eqn:noise}
 \end{equation}
-The final constraint is $\sigma_\epsilon \approx 21$.
+The final constraint is $\sigma_\epsilon \approx 3.5$, for $z_0 = 0.55$. This is still 
+considerable uncertainty, but fortunately we can increase the signal to noise. 
+While the majority of the cross-correlation signal is at low redshifts, 
+the 1-halo tSZ term, which appears as noise in Eq.~\ref{eqn:noise}, 
+peaks even more strongly at low redshift. Thus the lowest redshift bins 
+are substantially noise dominated. If we remove all information at $z < 0.3$,
+possible by explicitly detecting resolved clusters and masking them from the tSZ map, 
+we considerably decrease the noise and thus the error on $\epsilon$.
+
+In this case we achieve $\sigma_\epsilon \approx 0.35$, which puts strong 
+constraints on the redshift at which the first clusters form.
 
 \section{Primordial Non-Gaussianity}
 
