@@ -439,7 +439,7 @@ def make_plots():
     plt.savefig("Clbyeps.pdf")
     plt.clf()
     np.savetxt("Clbyeps.txt",Clbyeps)
-    print(1./np.sum(Clbyeps/noise))
+    print("sigma = ",np.sqrt(1./np.sum(Clbyeps/noise))," z_0 = ",z0)
 
 if __name__ == "__main__":
     #Planck 2015 error on sigma_8
