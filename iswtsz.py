@@ -421,7 +421,6 @@ def make_plots():
     #Plot the mean redshift as a function of l
     meanz = np.array([ttisw.tszzweighted(l) for l in ll])
     plt.loglog(ll, meanz, ls='--',label=r"$z_0$")
-    print(meanz/(ll/100*0.04))
     plt.legend(loc=0)
     plt.xlabel("$l$")
     plt.ylabel(r"$z_0$")
@@ -433,13 +432,24 @@ def make_plots():
     Clbyeps = cmboutputscale*np.array([ttisw.dClbydeps(l, z0) for l in ll])
     plt.loglog(ll, Clbyeps, ls='-',label=r"$dC_l/d\epsilon$")
     plt.loglog(ll, noise, ls='--',label=r"$\sigma_l^{yT}$")
+    #Now make the plot removing the z<0.3 stuff
+    tsz1h03 =  cmboutputscale * np.array([ttisw.tsz_1h_limber(l, minz=0.3) for l in ll])
+    tsztsz03 = cmboutputscale * np.array([ttisw.crosscorr(l, ttisw.tsz_2h_window_function_limber, minz=0.3) for l in ll])
+    iswisw03 = cmboutputscale * np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber, minz=0.3) for l in ll])
+    iswtsz03 = cmboutputscale * np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.tsz_2h_window_function_limber, minz=0.3) for l in ll])
+    Clbyeps03 = cmboutputscale*np.array([ttisw.dClbydeps(l, z0, minz=0.3) for l in ll])
+    noise03 = ((tsz1h03 + tsztsz03)*(iswisw03 + cmb)+iswtsz03**2)/(2*ll+1)
+    plt.loglog(ll, Clbyeps03, ls='-',label=r"$dC_l/d\epsilon z>0.3$")
+    plt.loglog(ll, noise03, ls='--',label=r"$\sigma_l^{yT} z>0.3$")
     plt.legend(loc=0)
     plt.xlabel("$l$")
     plt.ylabel(r"$(l (l+1) / (2\pi) ) C_\mathrm{l}$")
     plt.savefig("Clbyeps.pdf")
     plt.clf()
     np.savetxt("Clbyeps.txt",Clbyeps)
+    np.savetxt("Clbyeps03.txt",Clbyeps03)
     print("sigma = ",np.sqrt(1./np.sum(Clbyeps/noise))," z_0 = ",z0)
+    print("sigma z>0.3 = ",np.sqrt(1./np.sum(Clbyeps03/noise03))," z_0 = ",z0)
 
 if __name__ == "__main__":
     #Planck 2015 error on sigma_8
