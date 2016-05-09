@@ -298,10 +298,11 @@ class TSZHalo(object):
         rr = self.lingrowth.angular_diameter(aa)
         return self.light / self.H0 / self.lingrowth.hzoverh0(aa) * Tmass * rr**2 /aa**2
 
-    def tsz_1h_limber(self, lmode):
+    def tsz_1h_limber(self, lmode, minz=0.):
         """The 2-halo window function for the tSZ that appears in the C_l if we use the Limber approximation.
         This gets rid of the spherical bessels."""
-        (cll, err) = scipy.integrate.quad(self._tsz_1h_integrand, 0.333, 1, args=lmode)
+        amax = 1/(1+minz)
+        (cll, err) = scipy.integrate.quad(self._tsz_1h_integrand, 0.2, amax, args=lmode)
         if err / (cll+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
         return (lmode*(lmode+1))/2/math.pi*cll
@@ -332,36 +333,36 @@ class TSZHalo(object):
         kk = (lmode + 1/2) / (rr+1e-12)
         return kk
 
-    def crosscorr(self, lmode, func1, func2=None):
+    def crosscorr(self, lmode, func1, func2=None, minz=0.):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
         if func2 != None:
             integrand = lambda aa: func2(aa,lmode) * func1(aa, lmode)*self._crosscorr_integrand(aa, lmode)
         else:
             integrand = lambda aa: func1(aa,lmode)**2 * self._crosscorr_integrand(aa, lmode)
-        (cll, err) = scipy.integrate.quad(integrand, 0.333, 1)
+        (cll, err) = scipy.integrate.quad(integrand, 0.2, 1/(1+minz))
         if err / (cll+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
         return (lmode*(lmode+1))/2/math.pi*cll
 
-    def tszzweighted(self, ll):
+    def tszzweighted(self, ll, minz=0.):
         """Find the weighted mean redshift of the tSZ integral"""
         normfunc = lambda aa: self.tsz_2h_window_function_limber(aa, ll)/((1e-12+self.lingrowth.angular_diameter(aa))*self.lingrowth.hzoverh0(aa))/aa**2
-        (norm, err) = scipy.integrate.quad(normfunc, 0.333, 1)
+        (norm, err) = scipy.integrate.quad(normfunc, 0.2, 1/(1+minz))
         if err / (norm+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
         zfunc = lambda aa: (1/aa-1)*normfunc(aa)
-        (tot, err) = scipy.integrate.quad(zfunc, 0.333, 1)
+        (tot, err) = scipy.integrate.quad(zfunc, 0.2, 1/(1+minz))
         if err / (tot+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
         assert 0 <= tot/norm < 2.5
         return tot/norm
 
-    def dClbydeps(self,ll, meanz=-1):
+    def dClbydeps(self,ll, meanz=-1, minz=0.):
         """Find the derivative of C_l by the small epsilon redshift parameter."""
         if meanz < 0:
             meanz = self.tszzweighted(ll)
         integrand = lambda aa: (1/aa-1-meanz)*self._crosscorr_integrand(aa, ll)*self.tsz_2h_window_function_limber(aa,ll)*self.isw_window_function_limber(aa,ll)
-        (cll, err) = scipy.integrate.quad(integrand, 0.333, 1)
+        (cll, err) = scipy.integrate.quad(integrand, 0.2, 1/(1+minz))
         if err / (cll+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
         return (ll*(ll+1))/(2*math.pi)*cll
