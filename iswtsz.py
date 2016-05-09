@@ -253,7 +253,7 @@ class TSZHalo(object):
         #Units are 1/Mpc. Takes dimensionless r/Rs and dimensionless l/ls
         #The bessel function does little unless l is large.
         integrand = lambda xx: ygas.y3d(xx) * xx * xx * scipy.special.j0(xx*ll/ls)
-        integrated,err = scipy.integrate.quad(integrand, 0, limit)
+        integrated,_ = scipy.integrate.quad(integrand, 0, limit)
 #         if err/integrated > 0.1:
 #             raise RuntimeError("Err in tsz integral: ",err, integrated)
         #Units:  dimensionless
@@ -427,8 +427,9 @@ def make_plots():
     plt.savefig("meanz.pdf")
     plt.clf()
     np.savetxt("meanz.txt",meanz)
+    z0 = np.mean(meanz)
     noise = ((tsz1h + tsztsz)*(iswisw + cmb)+iswtsz**2)/(2*ll+1)
-    Clbyeps = cmboutputscale*np.array([ttisw.dClbydeps(l, z0) for l,z0 in zip(ll,meanz)])
+    Clbyeps = cmboutputscale*np.array([ttisw.dClbydeps(l, z0) for l in ll])
     plt.loglog(ll, Clbyeps, ls='-',label=r"$dC_l/d\epsilon$")
     plt.loglog(ll, noise, ls='--',label=r"$\sigma_l^{yT}$")
     plt.legend(loc=0)
