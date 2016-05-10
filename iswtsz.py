@@ -428,7 +428,7 @@ def make_plots():
     plt.clf()
     np.savetxt("meanz.txt",meanz)
     z0 = np.mean(meanz)
-    noise = ((tsz1h + tsztsz)*(iswisw + cmb)+iswtsz**2)/(2*ll+1)
+    noise = ((tsz1h + tsztsz)*cmb+iswtsz**2)/(2*ll+1)
     Clbyeps = cmboutputscale*np.array([ttisw.dClbydeps(l, z0) for l in ll])
     plt.loglog(ll, Clbyeps, ls='-',label=r"$dC_l/d\epsilon$")
     plt.loglog(ll, noise, ls='--',label=r"$\sigma_l^{yT}$")
@@ -438,7 +438,7 @@ def make_plots():
 #     iswisw03 = cmboutputscale * np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber, minz=0.3) for l in ll])
     iswtsz03 = cmboutputscale * np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.tsz_2h_window_function_limber, minz=0.3) for l in ll])
     Clbyeps03 = cmboutputscale*np.array([ttisw.dClbydeps(l, z0, minz=0.3) for l in ll])
-    noise03 = ((tsz1h03 + tsztsz03)*(iswisw + cmb)+iswtsz03**2)/(2*ll+1)
+    noise03 = ((tsz1h03 + tsztsz03)*cmb+iswtsz03**2)/(2*ll+1)
     plt.loglog(ll, Clbyeps03, ls='-',label=r"$dC_l/d\epsilon\; (z>0.3)$")
     plt.loglog(ll, noise03, ls='--',label=r"$\sigma_l^{yT}\; (z>0.3)$")
     plt.legend(loc=0)
@@ -448,8 +448,8 @@ def make_plots():
     plt.clf()
     np.savetxt("Clbyeps.txt",Clbyeps)
     np.savetxt("Clbyeps03.txt",Clbyeps03)
-    print("sigma = ",np.sqrt(1./np.sum(Clbyeps/noise))," z_0 = ",z0)
-    print("sigma z>0.3 = ",np.sqrt(1./np.sum(Clbyeps03/noise03))," z_0 = ",z0)
+    print("sigma = ",np.sqrt(1./np.sum(Clbyeps**2/noise))," z_0 = ",z0)
+    print("sigma z>0.3 = ",np.sqrt(1./np.sum(Clbyeps03**2/noise03))," z_0 = ",z0)
 
 if __name__ == "__main__":
     #Planck 2015 error on sigma_8
