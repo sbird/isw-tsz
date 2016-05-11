@@ -430,7 +430,7 @@ def make_plots():
     z0 = np.mean(meanz)
     noise = ((tsz1h + tsztsz)*cmb+iswtsz**2)/(2*ll+1)
     Clbyeps = cmboutputscale*np.array([ttisw.dClbydeps(l, z0) for l in ll])
-    plt.loglog(ll, Clbyeps, ls='-',label=r"$dC_l/d\epsilon$")
+    plt.loglog(ll, Clbyeps**2, ls='-',label=r"$dC^2_l/d\epsilon$")
     plt.loglog(ll, noise, ls='--',label=r"$\sigma_l^{yT}$")
     #Now make the plot removing the z<0.3 stuff
     tsz1h03 =  cmboutputscale * np.array([ttisw.tsz_1h_limber(l, minz=0.3) for l in ll])
@@ -439,7 +439,7 @@ def make_plots():
     iswtsz03 = cmboutputscale * np.array([ttisw.crosscorr(l, ttisw.isw_window_function_limber,ttisw.tsz_2h_window_function_limber, minz=0.3) for l in ll])
     Clbyeps03 = cmboutputscale*np.array([ttisw.dClbydeps(l, z0, minz=0.3) for l in ll])
     noise03 = ((tsz1h03 + tsztsz03)*cmb+iswtsz03**2)/(2*ll+1)
-    plt.loglog(ll, Clbyeps03, ls='-',label=r"$dC_l/d\epsilon\; (z>0.3)$")
+    plt.loglog(ll, Clbyeps03**2, ls='-',label=r"$dC^2_l/d\epsilon\; (z>0.3)$")
     plt.loglog(ll, noise03, ls='--',label=r"$\sigma_l^{yT}\; (z>0.3)$")
     plt.legend(loc=0)
     plt.xlabel("$l$")
