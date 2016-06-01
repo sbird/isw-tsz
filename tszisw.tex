@@ -155,7 +155,7 @@ the amplitude of density perturbations inferred from CMB
 measurements
 \cite{Lueker:2009rx,Komatsu:2010fb,Ade:2013lmv,Ade:2015fva}.
 The tension, though, is based
-upon theoretical models that connnect the $y$-distortion and
+upon theoretical models that connect the $y$-distortion and
 density-perturbation amplitudes.  Ingredients of these models
 include nonlinear evolution of primordial perturbations, gas
 dynamics, and feedback processes, all of which can become quite
@@ -170,6 +170,16 @@ which may be used to probe scale-dependent non-gaussianity
 explore whether this early-Universe signal can be distinguished
 from late-time effects that induce a $yT$ correlation.
 
+This paper is organized as follows.  In Section
+\ref{sec:calculation} we derive expressions for the power
+spectra for the ISW effect, the tSZ effect, and their
+cross-correlation, and then present numerical results.  In
+Section \ref{sec:sz} we evaluate the prospects to infer some
+information about the redshift distribution for tSZ fluctuations
+from measurement of the tSZ-ISW cross-correlation.  In
+Section \ref{sec:ng} we estimate the sensitivity of future
+measurements to the tSZ-ISW cross-correlation from primordial
+non-gaussianity.  We conclude in Section \ref{sec:concl}.
 
 \section{Calculation}
 \label{sec:calculation}
@@ -186,7 +196,7 @@ is
      -\frac{2}{c^2}\int d\eta\,
      \frac{d\phi}{d\eta}(c\eta \hat n;z)
      = -\frac{2}{c^2}\int\, dz 
-     \frac{d\phi}{dz}(r \hat n;z) 
+     \frac{d\phi}{dz}(r \hat n;z),
 \label{eqn:isw}
 \end{equation}
 where $\phi(\vec x,z)$ is the gravitational potential at
@@ -203,11 +213,11 @@ mean matter density $\bar \rho$ and fractional density
 perturbation $\delta(\vec x;z)$.  We then use the Friedmann
 equation to write $\bar \rho = (3/8\pi G) \Omega_m H_0^2 a^{-3}$ in
 terms of the matter density $\Omega_m$ (in units of the critical
-density), Hubble parameter $H_0^2$, and scale factor
+density), Hubble parameter $H_0$, and scale factor
 $a=(1+z)^{-1}$.  We further write the density perturbation
 $\delta(\vec x;z) = D(z) \delta(\vec x;z=0)$ in terms of the
-linear-theory growth factor $D(z)$  We can then re-write the
-Poisson equation as,
+linear-theory growth factor $D(z)$.  We can then re-write the
+Poisson equation as
 \begin{equation}
      \phi(\vec x;z) = -\frac{3}{2} \Omega_m H_0^2
      \frac{D(z)}{a(z)} \left[ \nabla_c^{-2} \delta(\vec x;z=0)
@@ -215,7 +225,7 @@ Poisson equation as,
 \label{eqn:phik}
 \end{equation}
 where $\nabla_c=\nabla/a$ is the gradient with respect to
-comoving coordinate.
+the comoving coordinates.
 
 The power spectrum for ISW-induced angular temperature
 fluctuations is then obtained using the Limber approximation,
@@ -228,11 +238,11 @@ of a three-dimensional field $\delta(\vec x)$, with
 line-of-sight-distance weight function $q(r)$, then the angular
 power spectrum, for multipole $l$, of $p(\hat n)$ is
 \begin{equation}
-     C_l^p = \int \, dr\, \frac{[q(r)]^2}{r^2} P(l/r),
+    C_l^p = \int \, dr\, \frac{[q(r)]^2}{r^2} P\left(\frac{l+1/2}{r}\right),
 \label{eqn:Limber}
 \end{equation}
-in terms of the three-dimensional power spectrum $P(k)$, in
-terms of wavenumber $k$, for $\delta(\vec x)$.
+in terms of the three-dimensional power spectrum $P(k)$, for
+wavenumber $k$, for $\delta(\vec x)$.
 
 Using Eqs.~(\ref{eqn:isw}), (\ref{eqn:phik}), and
 (\ref{eqn:Limber}), we find the power spectrum for ISW-induced
@@ -240,19 +250,19 @@ temperature fluctuations to be,
 \begin{eqnarray}
      C_l & = & \left(\frac{3 \Omega_m H_0^2}{c^3} \right)^2
      \frac{c}{l^4} \int r^2  dr \left[ H(z) \frac{d}{dz}
-     \left( \frac{D(z)}{a(z)} \right) \right]^2 P\left(\frac{l}{r}
+     \left( \frac{D(z)}{a(z)} \right) \right]^2 P\left(k
      \right) \nonumber \\ 
         & = & \left(\frac{3 \Omega_m H_0^2}{c^3} \right)^2
      \frac{c}{l^4} \int  dz H(z) \left[r(z) \frac{d}{dz}
-     \left( \frac{D(z)}{a(z)} \right) \right]^2 P\left(\frac{l}{r}
-     \right), \nonumber \\
+     \left( \frac{D(z)}{a(z)} \right) \right]^2 P\left(k
+     \right) \nonumber \\
      & = &  \int \frac{c\, dz}{H(z)} \left[ \Delta^{\rm
-     isw}_l(z)\right]^2 P(l/r),
+     isw}_l(z)\right]^2 P\left(\frac{l+1/2}{r}\right),
 \label{eqn:Clisw}
 \end{eqnarray}
 in terms of the matter-density power spectrum $P(k)$ today.
 Note that we used the relation $dz = -(H/c) dr$ to get from the
-first to the second line in Eq.~(\ref{eqn:Clisw}, and we have
+first to the second line in Eq.~(\ref{eqn:Clisw}), and we have
 defined in the last line the ISW transfer function,
 \begin{equation}
      \Delta^{\rm isw}_l(z) = \frac{3 \Omega_m H_0^2}{c^3 l^2}
@@ -297,7 +307,7 @@ spatially with a fractional number-density perturbation that is
 assumed to be $b(M,z)\delta(\vec x)$ in terms of a bias
 $b(M,z)$.  The spatial fluctuations to the electron pressure
 $P_e(\vec x)=k_B n_e(\vec x) T_e(\vec x)$ that give rise to
-angular fluctuations in the Compton=$y$ parameter induced by
+angular fluctuations in the Compton-$y$ parameter induced by
 clusters of mass $M$ and redshift $z$ can then be
 modeled as $b(M,z)$ times a convolution of the density
 perturbation $\delta(\vec x)$ with the electron-pressure profile
@@ -305,11 +315,12 @@ of the cluster.  Since convolution in configuration space
 corresponds to multiplication in Fourier space, the Limber
 derivation discussed above can be used to find the power
 spectrum for angular fluctuations in the Compton-$y$ parameter
-to be \cite{Komatsu:1999ev,Diego:2004uw,Taburet:2010hb,Ade:2013qta,Ade:2015mva}
+to be
+\cite{Komatsu:1999ev,Diego:2004uw,Taburet:2010hb,Ade:2013qta,Ade:2015mva},
 \begin{equation}
      C_l^{yy,2h} = \int \frac{c\, dz}{H(z)} \left[
      \Delta^{y}_l(z) \right]^2
-     P(l/r),
+     P\left(\frac{l+1/2}{r}\right),
 \label{eqn:Cly2h}
 \end{equation}
 in terms of a transfer function,
@@ -321,10 +332,11 @@ Here, $y_l(M,z)$ is the 2d Fourier transform of the
 Compton-$y$ image, on the sky, of a cluster of mass $M$ at
 redshift $z$ and is given in terms of the electron pressure
 profile $P_e(M,z;x)$, as a function of scale radius $x$ in the
-cluster, for example, in Eq.~(A.5) in Ref.~\cite{Aghanim:2015eva}.
+cluster.
 We use for our numerical work the electron-pressure profiles of
 Ref.~\cite{Komatsu:2002wc}. We assume the halo mass function 
-of~\cite{Tinker:2008ff} and the halo bias of~\cite{Sheth:1999mn}
+of Ref.~\cite{Tinker:2008ff} and the halo bias of
+Ref.~\cite{Sheth:1999mn}.
 
 The ``2h'' superscript in the
 $y$-parameter power spectrum indicates that this is the
@@ -349,20 +361,23 @@ and the two-halo contribution to tSZ fluctuations are both
 generated on large angular scales by the same fractional density
 perturbation $\delta(\vec x)$, there should be a
 cross-correlation between the two.  From the expressions,
-Eq.~(\ref{eqn:Clisw}) and (\ref{eqn:Cly2h}, it is clear that this
+Eq.~(\ref{eqn:Clisw}) and (\ref{eqn:Cly2h}), it is clear that this
 cross-correlation is
 \begin{equation}
      C_l^{yT} = \int \frac{c\, dz}{H(z)} \Delta^{\rm isw}_l(z)
-     \Delta^y_l(z) P(l/r).
+     \Delta^y_l(z) P\left(\frac{l+1/2}{r}\right).
 \label{eqn:Clcross}
 \end{equation}
 
 \begin{figure}[h]
-\includegraphics[width=10 cm, height = 7 cm]{ISWtsz.pdf}
-    \caption{The $y,2h$ (blue) and ISW (green) power spectra 
-     are shown in dashed lines, while the $y,2h$-$ISW$ cross 
-     correlation is in solid red. The $y, 1h$ is dotted. 
-     The CMB power spectrum is shown dot-dashed for comparison.} 
+\includegraphics[width=9.5cm, height = 7 cm]{ISWtsz.pdf}
+    \caption{The ISW power spectrum $C_l^{\rm isw}$ (green) and
+    the two-halo contribution ($y,2h$) to $C_l^{yy}$ (blue) are
+    shown in dashed
+    lines, while $C_l^{yT}$ is shown in solid
+    red. The one-halo contribution ($y, 1h$) to $C_l^{yy}$ is
+    dotted.  The CMB power spectrum is shown dot-dashed for
+    comparison.} 
 \label{fig:power}
 \end{figure}
 
@@ -375,10 +390,11 @@ $\Omega_m = 0.279$, baryon density $\Omega_b = 0.046$, a
 critical density for collapse of $\delta_c = 1.686$, and
 dimensionless Hubble parameter $h= 0.701$, although the
 large-angle results that will be our primary focus are largely
-insensitive to these details.  In practice, we find that the
-majority of the contribution comes from a redshift integration
-from $z=0$ to $z=4$ and a halo-mass integration between
-$10^{12}\,M_\odot$ and $10^{15}\,M_\odot$.
+insensitive to these details. In practice, we find that over ninety percent 
+of the contribution comes from the redshfit range $z = 0-3$ and the halo mass range 
+$10^{13}\,M_\odot$ and $10^{15}\,M_\odot$. 
+We therefore integrate over slightly wider ranges; $z=0 - 4$  
+and halo mass $10^{12}\,M_\odot$ and $10^{16}\,M_\odot$.
 
 The large angle (low-$l$) behaviors of the ISW-ISW
 autocorrelation, the $yT$ cross-correlation, and the one- and
@@ -386,9 +402,9 @@ two-halo contributions to the $yy$ power spectra are easy to
 understand qualitatively.  Let us begin with the ISW effect.  Here, the
 $l$ dependence of the transfer function is $\Delta^{\rm isw}_l
 \propto l$, and for large angles ($l\lesssim 100$), the power
-spectrum is $P(l/r) \propto l$.  As a result, $l^2C_l^{\rm isw}
+spectrum is $P(l/r) \propto l$, assuming $l+1/2 \approx l$.  As a result, $l^2C_l^{\rm isw}
 \propto l^{-1}$ for $l \lesssim 100$.  Next consider the tSZ
-power spectra.  Galaxy cluster subtend a broad distribution of
+power spectra.  Galaxy clusters subtend a broad distribution of
 angular sizes but are rarely wider than a degree.  Thus, for $l
 \lesssim 100$, they are effectively point sources.  The
 Fourier transform is thus effectively approximated by $y_l(M,z)
@@ -397,13 +413,14 @@ the $y$-distortion over the cluster image on the sky, or
 equivalently, the total contribution of the cluster to the
 angle-averaged $y$.  As a result of the independence of $y_l$ on
 $l$ and $P(l/r) \propto l$ for $l\gtrsim100$, we infer
-$l^2 C_l^{yy,2h} \propto l$ and $l^2 C_l^{yT} \propto $const for
+$l^2 C_l^{yy,2h} \propto l$ and $l^2 C_l^{yT} \propto $~const for
 $l\lesssim 100$.  Finally, the one-halo contribution to
 $C_l^{yy}$ is nearly constant (i.e., $l^2C_l\propto l^2$) for
 $l\lesssim 100$ as expected for Poisson fluctuations in what are
 (at these angular scales) effectively point sources.
 
 \section{SZ redshift distribution}
+\label{sec:sz}
 
 We now discuss the prospects to learn about the redshift
 distribution of the galaxy clusters that produce the Compton-$y$
@@ -411,7 +428,7 @@ distortion.  As seen above, the $yT$ correlation is significant
 primarily at multipole moments $l \lesssim 100$, where the
 window function $y_l(z)$ is largely independent of $l$.  The
 amplitude of the cross-correlation, relative to the
-auto-correlations, can be understood largely by examining the
+auto-correlations, can be largely understood by examining the
 overlap between the redshift dependences of the two transfer
 functions $\Delta_l^y(z)$ and $\Delta_l^{\rm isw}(z)$.  These
 transfer functions are shown in Fig.~\ref{fig:Deltas}.  More
@@ -419,12 +436,12 @@ precisely, we plot--noting that $P(l/r) \propto l/r$ for the
 relevant angular scales---$\Delta_l/\left[H(z) r(z) \right]^{1/2}$,
 the square root of the integrands for $C_l$, as it is the
 overlap of these two functions that determines the strength of
-the cross=correlation relative to the auto-correlation.  We also
+the cross-correlation relative to the auto-correlation.  We also
 normalize the curves in Fig.~\ref{fig:Deltas} to both have the
 same area under the curve.
 
 \begin{figure}[h]
-\includegraphics[width=10 cm, height = 7 cm]{redshift.pdf}
+\includegraphics[width=9.5cm, height = 7 cm]{redshift.pdf}
 \caption{We plot the transfer functions $\Delta_l^{\rm isw}(z)$
      and $\Delta_l^y(z)$, divided by $[r(z)H(z)]^{1/2}$, at $l=20$. The
      squares of the plotted quantities are the redshift ($z$)
@@ -437,11 +454,6 @@ same area under the curve.
 \label{fig:Deltas}
 \end{figure}
 
-
-
-
-
-
 Given the current fairly precise constraints to dark-energy
 parameters, the predictions for $\Delta_l^{\rm isw}(z)$ has
 relatively small uncertainties.  The prediction for
@@ -449,7 +461,7 @@ $\Delta_l^y(z)$ depends, however, on the redshift distribution
 of the halo mass function, bias parameters, and cluster pressure
 profiles, all of which involve quite uncertain physics.
 Measurement of the $yT$ correlation will, however, provide an
-additional empirical constraint to the redshift evolution of the
+additional empirical constraint on the redshift evolution of the
 $y$ parameter.
 
 To see how this might work, we replace
@@ -473,11 +485,12 @@ smaller redshifts (and {\it vice versa} for $\epsilon<0$) in
 such a way that leaves the total $y$ signal unchanged.
 
 \begin{figure}[h]
-\includegraphics[width=10 cm, height = 7 cm]{Clbyeps.pdf}
-    \caption{The derivative of the ISW-tSZ cross-correlation by $\epsilon$, 
-    $\partial C_l^{yT}/\partial \epsilon$ (solid blue) and the ISW-tSZ 
-    noise, $\sigma_l^{yT}$ (dashed green). We also show the same quantities 
-    restricting to $z>0.3$ (solid red and dashed cyan, respectively), 
+\includegraphics[width=9.5cm, height = 7 cm]{Clbyeps.pdf}
+\caption{The derivative $\partial C_l^{yT}/\partial \epsilon$ of
+    the ISW-tSZ cross-correlation with respect to $\epsilon$
+    (solid blue), and the ISW-tSZ noise $\sigma_l^{yT}$ (dashed
+    green).  We also show the same quantities restricting to
+    $z>0.3$ (solid red and dashed cyan, respectively),  
     which substantially increases the signal-to-noise.} 
 \label{fig:clderiv}
 \end{figure}
@@ -486,8 +499,8 @@ We now estimate the smallest value $\sigma_\epsilon$ of
 $\epsilon$ that will be detectable with future measurements.
 This is given by
 \begin{equation}
-     \frac{1}{\sigma_\epsilon}^2 \simeq \sum_l \frac{ \partial
-     C_l^{yT}/\partial \epsilon}{\left(\sigma_l^{yT} \right)^2},
+     \frac{1}{\sigma_\epsilon^2} \simeq \sum_l \frac{ \left( \partial
+     C_l^{yT}/\partial \epsilon \right)^2}{\left(\sigma_l^{yT} \right)^2},
 \end{equation}
 where
 \begin{equation}
@@ -496,76 +509,15 @@ where
      (z-z_0) P(l/r).
 \label{eqn:Clderiv}
 \end{equation}
-Figure~\ref{fig:clderiv} shows $\partial C_l^{yT}/\partial \epsilon$ and $\left(\sigma_l^{yT}\right)^2$.
-We estimate the noise using~\cite{Taburet:2010hb}
-\begin{equation}
-    \left(\sigma_l^{yT}\right)^2 = \frac{1}{2 l +1} \left(\left[C_l^{ISW-tSZ}\right]^2 + (C_l^{ISW} + C_l^{CMB}) C_l^{yy}\right)
-    \label{eqn:noise}
-\end{equation}
-The final constraint is $\sigma_\epsilon \approx 3.5$, for $z_0 = 0.55$. This is still 
-considerable uncertainty, but fortunately we can increase the signal to noise. 
-While the majority of the cross-correlation signal is at low redshifts, 
-the 1-halo tSZ term, which appears as noise in Eq.~\ref{eqn:noise}, 
-peaks even more strongly at low redshift. Thus the lowest redshift bins 
-are substantially noise dominated. If we remove all information at $z < 0.3$,
-possible by explicitly detecting resolved clusters and masking them from the tSZ map, 
-we considerably decrease the noise and thus the error on $\epsilon$.
+Fig.~\ref{fig:clderiv} shows $\partial C_l^{yT}/\partial
+\epsilon$ and $\sigma_l^{yT}$. 
 
-In this case we achieve $\sigma_\epsilon \approx 0.35$, which puts strong 
-constraints on the redshift at which the first clusters form.
-
-\section{Primordial Non-Gaussianity}
-
-We now review the $yT$ cross-correlation from the
-scale-dependent primordial non-gaussianity scenario of
-Ref.~\cite{Emami:2015xqa}.  If primordial perturbations are
-non-gaussian, the amplitude of small-wavelength power can be
-modulated by long-wavelength Fourier modes of the density
-field.  The dissipation of primordial Fourier modes with
-wavenumbers $k\simeq 1-50$ Mpc$^{-1}$ (which takes place at
-redshifts $1100 \lesssim z \lesssim 5\times 10^4$) give rise to
-primordial Compton-$y$ distortions.  If there is non-gaussianiy,
-then the angular distribution of this $y$ distortion may be
-correlated with the large-scale density modes that give rise,
-through the Sachs-Wolfe effect, to large-angle fluctuations in
-the CMB temperature.
-
-The predictions for this primordial $yT$ correlation depend on the
-yet-unmeasured isotropic value $\VEV{y}$ of the Compton-$y$
-parameter for which we take as a canonical value $4\times
-10^{-9}$.  The $yy$ and $yT$ power spectra for the scenario are
-then, 
-\begin{eqnarray}
-     l^2 C_l^{yy,{\rm ng}} &\simeq& 5.5\times10^{-20} \, \left( \frac{
-     f_{\rm nl}^y}{200} \right)^2 \left(\frac{\VEV{y}}{4\times
-     10^{-9}} \right)^2, \\
-     l^2 C_l^{yT,{\rm ng}} &\simeq& 5.8\times10^{-15} \, \left( \frac{
-     f_{\rm nl}^y}{200} \right) \left(\frac{\VEV{y}}{4\times
-     10^{-9}} \right).
-\end{eqnarray}
-Here, $f_{\rm nl}^y$ is the non-gaussianity parameter for
-squeezed bispectrum configurations in which the wavenumber of
-the long-wavelength mode is of the $\sim$Gpc$^{-1}$ scales of
-modes that contribute to the ISW effect, while the two
-short-wavelength modes have wavelengths $1\,{\rm Mpc}^{-1}
-\lesssim k \lesssim 50\,{\rm Mpc}^{-1}$
-As discussed in Ref.~\cite{Emami:2015xqa}, there are no
-existing model-independent constraints to $f_{\rm nl}^y$.
-
-We now estimate the detectability of the $yT$ cross-correlation
-from non-gaussianity, discussed in Ref.~\cite{Emami:2015xqa}.
-In that work, the late-time contribution to $C_l^{yy}$ and
-$C_l^{yT}$ was neglected, and the detectability of the
-primordial signal inferred assuming that detection of $y$
-fluctuations was noise-limited.  Here we re-do those estimates
-taking into account the late-time $yT$ correlation calculated
-above.  Under the null hypothesis of no early-Universe
-contribution to the $yT$ correlation, the error with which
-each $C_l^{yT}$ can be determined is
+The error with which each $C_l^{yT}$ can be determined is
 \begin{equation}
      \left(\sigma_l^{yT} \right)^2 =\frac{1}{2l+1} \left[ \left(
      C_l^{yT} \right)^2 + C_l^{TT}\left(
-     C_l^{yy} + N_lW_l^{-2} \right)\right], 
+     C_l^{yy} + N_lW_l^{-2} \right)\right],
+\label{eqn:noise}
 \end{equation}
 where $C_l^{TT}$ is the CMB temperature power spectrum,
 $W_l = e^{-l^2\sigma_b^2/2}$ is a window function, and $ N_l
@@ -593,12 +545,75 @@ fluctuations.  We may thus approximate
 \label{eqn:noiseapprox}     
 \end{equation}
 
+The smallest detectable value of $\epsilon$ evaluates to
+$\sigma_\epsilon \simeq 9$, for $z_0 = 0.55$. This is still
+a considerable uncertainty, but the signal to noise can be
+increased.  While the majority of the cross-correlation signal
+is at low redshifts, the 1-halo tSZ term, which appears as noise
+in Eq.~(\ref{eqn:noise}), peaks even more strongly at low
+redshift. Thus the lowest-redshift bins are substantially noise
+dominated. If we remove all information at redshifts $z < 0.3$,
+possible by explicitly detecting resolved clusters and masking
+them from the tSZ map, then the noise can be considerably
+reduced.  In this case, the smallest detectable value becomes
+$\sigma_\epsilon \simeq 0.9$, which, if achieved, would
+provide some valuable information on the redshift distribution
+of tSZ fluctuations.
+
+\section{Primordial Non-Gaussianity}
+\label{sec:ng}
+
+We now review the $yT$ cross-correlation from the
+scale-dependent primordial non-gaussianity scenario of
+Ref.~\cite{Emami:2015xqa}.  If primordial perturbations are
+non-gaussian, the amplitude of small-wavelength power can be
+modulated by long-wavelength Fourier modes of the density
+field.  The dissipation of primordial Fourier modes with
+wavenumbers $k\simeq 1-50$ Mpc$^{-1}$ (which takes place at
+redshifts $1100 \lesssim z \lesssim 5\times 10^4$) gives rise to
+primordial Compton-$y$ distortions.  If there is non-gaussianity,
+then the angular distribution of this $y$ distortion may be
+correlated with the large-scale density modes that give rise,
+through the Sachs-Wolfe effect, to large-angle fluctuations in
+the CMB temperature.
+
+The predictions for this primordial $yT$ correlation depend on the
+yet-unmeasured isotropic value $\VEV{y}$ of the Compton-$y$
+parameter for which we take as a canonical value $4\times
+10^{-9}$.  The $yy$ and $yT$ power spectra for the scenario are
+then, 
+\begin{eqnarray}
+     l^2 C_l^{yy,{\rm ng}} &\simeq& 5.5\times10^{-20} \, \left( \frac{
+     f_{\rm nl}^y}{200} \right)^2 \left(\frac{\VEV{y}}{4\times
+     10^{-9}} \right)^2, \\
+     l^2 C_l^{yT,{\rm ng}} &\simeq& 5.8\times10^{-15} \, \left( \frac{
+     f_{\rm nl}^y}{200} \right) \left(\frac{\VEV{y}}{4\times
+     10^{-9}} \right).
+\end{eqnarray}
+Here, $f_{\rm nl}^y$ is the non-gaussianity parameter for
+squeezed bispectrum configurations in which the wavenumber of
+the long-wavelength mode is of the $\sim$Gpc$^{-1}$ scales of
+modes that contribute to the ISW effect, while the two
+short-wavelength modes have wavelengths $1\,{\rm Mpc}^{-1}
+\lesssim k \lesssim 50\,{\rm Mpc}^{-1}$
+As discussed in Ref.~\cite{Emami:2015xqa}, there are no
+existing model-independent constraints on $f_{\rm nl}^y$.
+
+We now estimate the detectability of the $yT$ cross-correlation
+from non-gaussianity, discussed in Ref.~\cite{Emami:2015xqa}.
+In that work, the late-time contribution to $C_l^{yy}$ and
+$C_l^{yT}$ was neglected, and the detectability of the
+primordial signal inferred assuming that detection of $y$
+fluctuations was noise-limited.  Here we re-do those estimates
+taking into account the late-time $yT$ correlation calculated
+above.
+
 The signal-to-noise with which an early-Universe
 $yT$ signal with power spectrum $C_l^{yT,{\rm ng}}$ can be
 distinguished from the null hypothesis is
 \begin{equation}
      \left(\frac{S}{N} \right) = \left(\sum_l\frac{\left(C_l^{yT,{\rm ng}}
-     \right)^2}{(\sigma_l^{yT})^2}\right)^{1/2},
+     \right)^2}{(\sigma_l^{yT})^2}\right)^{1/2}.
 \label{eqn:SN}
 \end{equation}
 Using Eq.~(\ref{eqn:noiseapprox}) and the numerical results for
@@ -614,6 +629,7 @@ The summand in Fig.~\ref{fig:power} is dominated by $l\lesssim
 angular resolution.
 
 \section{Conclusion}
+\label{sec:concl}
 
 Here we have calculated the tSZ-ISW cross-correlation,
 investigated its use in constraining the redshift distribution
@@ -621,7 +637,8 @@ of $y$-parameter fluctuations, and evaluated the detectability
 of an early-Universe $yT$ cross-correlation.  We showed that
 measurement of the $yT$ cross-correlation can be used to
 constrain the redshift distribution of the sources of
-$y$-parameter fluctuations, something that may be of utility
+$y$-parameter fluctuations, as long as low-redshift tSZ clusters
+can be masked, something that may be of utility
 given uncertainties in the cluster-physics and
 large-scale-structure ingredients (pressure profiles, halo
 biases, mass functions) that determine these fluctuations.  We
@@ -630,31 +647,12 @@ correlations induced at late times, of the detectability of
 early-Universe $yT$ correlations may be optimistic by several
 orders of magnitude.
 
-\subsection*{Acknowledgments}
- 
+\begin{acknowledgments}
 We thank Liang Dai, Yacine Ali-Ha\"{i}moud, and Ely
 Kovetz for useful discussions.  SB was supported by NASA through
 Einstein Postdoctoral Fellowship Award Number PF5-160133.  This
 work was supported by NSF Grant No. 0244990, NASA NNX15AB18G,
 the John Templeton Foundation, and the Simons Foundation.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-\begin{acknowledgments}
-This work was supported at JHU by NSF Grant No.\
-0244990, NASA NNX15AB18G, the John Templeton Foundation, and the
-Simons Foundation. 
 \end{acknowledgments}
 
 
@@ -778,7 +776,7 @@ Simons Foundation.
 \bibitem{Emami:2015xqa} 
   R.~Emami, E.~Dimastrogiovanni, J.~Chluba and M.~Kamionkowski,
   %``Probing the scale dependence of non-Gaussianity with spectral distortions of the cosmic microwave background,''
-  Phys.\ Rev.\ D {\bf 91}, no. 12, 123531 (2015)
+  Phys.\ Rev.\ D {\bf 91}, 123531 (2015)
   %doi:10.1103/PhysRevD.91.123531
   [arXiv:1504.00675 [astro-ph.CO]].
   %%CITATION = %doi:10.1103/PhysRevD.91.123531;%%
