@@ -105,6 +105,38 @@ class LinearGrowth(object):
         Dplusda += self.EprimebyE(aa) * self.lingrowthfac(aa)
         return Dplusda/ aa - self.lingrowthfac(aa) /aa**2
 
+class YYgasArnaud(object):
+    """Helper class for the gas profile, which allows us to precompute the prefactors.
+    Expects units without the h!"""
+    def __init__(self, mass, hubble, zz, omegam0):
+        #Electron mass in kg
+        me = 9.11e-31
+        #Thompson cross-section in m^2
+        sigmat = 6.6524e-29
+        #speed of light in m/s
+        light = 2.99e8
+        #Units are s^2 / kg
+        self.y3d_prefac = sigmat / me / light**2
+        self.c500 = 1.81
+        self.pp_prefac = 6.41 * (0.7/hubble)**(1.5)
+        self.Pelec_prefac = 1.65 *(hubble/0.7)**2 * self.Eofz(zz, omegam0)**(8./3) * (mass / 3e14 * (0.7/hubble))**(2/3.+0.12)
+
+    def Eofz(self, zz,omegam0):
+        """H(z) / H0"""
+        return np.sqrt(omegam0 * (1+zz)**3 + (1-omegam0))
+
+    def pp_dimless(self, x):
+        """Eq. 11 of 1509.05134"""
+        return  self.pp_prefac/ ((self.c500 * x)**0.31*(1+(self.c500*x)**1.33)**(4.13-0.31)/1.33)
+
+    def Pelec(self, x):
+        """Electron pressure profile from Arnaud 2010, see 1509.05134 eq. 10."""
+        return self.Pelec_prefac * self.pp_dimless(x)
+
+    def y3d(self, x):
+        """Electron pressure profile from K&S 2002 eq 7. Units of 1 / Mpc."""
+        return self.Pelec(x) * self.y3d_prefac
+
 class YYgas(object):
     """Helper class for the gas profile, which allows us to precompute the prefactors.
     Expects units without the h!"""
