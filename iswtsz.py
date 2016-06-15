@@ -163,15 +163,15 @@ class YYgas(object):
             ll1p = self.logxbyx(x)
         return (1 - self.BB * ll1p)**(1./(self.gamma-1))
 
-    def Pgas(self, x):
+    def Pelec(self, x):
         """Gas pressure profile, K&S 02 eq 8.
         Other choices are possible (indeed preferred)!
         Units are kg / Mpc /s^2"""
-        return self.Pgas0 * self.ygas(x)**self.gamma
+        return (2 + 2*0.76)/(3 + 5*0.76) * self.Pgas0 * self.ygas(x)**self.gamma
 
     def y3d(self, x):
         """Electron pressure profile from K&S 2002 eq 7. Units of 1 / Mpc."""
-        return (2 + 2*0.76)/(3 + 5*0.76) * self.Pgas(x) * self.y3d_prefac
+        return self.Pelec(x) * self.y3d_prefac
 
 
 class TSZHalo(object):
