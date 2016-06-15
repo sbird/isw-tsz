@@ -9,7 +9,6 @@ import matplotlib
 matplotlib.use('PDF')
 import matplotlib.pyplot as plt
 import halo_mass_function as hm
-import concentration
 
 class LinearGrowth(object):
     """Class to store functions related to the linear growth factor and the Hubble flow."""
@@ -116,6 +115,10 @@ class YYgasArnaud(object):
         #speed of light in m/s
         light = 2.99e8
         #Units are s^2 / kg
+        #1 Mpc in m
+        Mpc = 3.086e22
+        #1 eV/cm^3 = 1.6e-19 * 10^6 kg/m/s^2
+        self.eVconv = 1.6e-19 * 1e6 * Mpc
         self.y3d_prefac = sigmat / me / light**2
         self.c500 = 1.81
         self.pp_prefac = 6.41 * (0.7/hubble)**(1.5)
@@ -131,7 +134,9 @@ class YYgasArnaud(object):
 
     def Pelec(self, x):
         """Electron pressure profile from Arnaud 2010, see 1509.05134 eq. 10."""
-        return self.Pelec_prefac * self.pp_dimless(x)
+        #Now in eV/cm^3
+        PeV = self.Pelec_prefac * self.pp_dimless(x)
+        return PeV * self.eVconv
 
     def y3d(self, x):
         """Electron pressure profile from K&S 2002 eq 7. Units of 1 / Mpc."""
@@ -218,7 +223,6 @@ class TSZHalo(object):
         #speed of light in km/s
         self.light = 2.99e5
         self.overden = hm.Overdensities(0,omegam0, omegab0,1-omegam0,hubble, 0.97,sigma8,log_mass_lim=(10,18))
-        self.conc_model = concentration.LudlowConcentration(self.Dofz)
         self._rhocrit0 = self.overden.rhocrit(0)
         self.lingrowth = LinearGrowth(omegam0=omegam0, hub=hubble)
 
@@ -254,42 +258,33 @@ class TSZHalo(object):
             dndM *= self.bias(nu)
         return dndM
 
-    def concentration(self,mass, aa):
-        """Compute the concentration for a halo mass"""
-        zz = 1./aa-1
-        nu = 1.686/self.overden.sigmaof_M(mass)
-        return self.conc_model.comoving_concentration(nu, zz)
-
-    def R200(self, mass):
+    def R500(self, mass):
         """Get the virial radius in comoving Mpc for a given mass in Msun/h"""
         #Units are Msun  h^2 / Mpc^3
         rhoc = self._rhocrit0
-        #Virial radius R200 in Mpc/h from the virial mass
-        return np.cbrt(3 * mass / (4* math.pi* 200 * rhoc)) / self.hubble
+        #Virial radius R500 in Mpc/h from the virial mass
+        return np.cbrt(3 * mass / (4* math.pi* 500 * rhoc)) / self.hubble
 
     def tsz_per_halo(self, M, aa,ll):
         """The 2D fourier transform of the projected Compton y-parameter, per halo.
         Eq 2 of Komatsu and Seljak 2002.
         Takes mass in units of Msun/h, is dimensionless. """
-        #Upper limit is the virial radius.
-        conc = self.concentration(M, aa)
         #Get rid of factor of h
-        rhogas_cos = (self.omegab0  / self.omegam0) * 200 * self._rhocrit0
-        ygas = YYgas(conc, M/self.hubble, rhogas_cos*self.hubble**2, self.R200(M), tszbias=self.tszbias)
+        ygas = YYgasArnaud(M/self.hubble/1.2, self.hubble, 1/aa-1, self.omegam0)
         #Also no factor of h
-        Rs = self.R200(M)/conc
-        ls = (1e-12+self.lingrowth.angular_diameter(aa)) / Rs
+        R500 = self.R500(M)/1.2**(1./3)
+        l500 = (1e-12+self.lingrowth.angular_diameter(aa)) / R500
         #Cutoff when the integrand becomes oscillatory.
-        limit = conc #60*math.pi*ls/ll
+        limit = 6 #60*math.pi*ls/ll
         #Integrand of the TSZ profile from Komatsu & Seljak 2002 eq. 2.
         #Units are 1/Mpc. Takes dimensionless r/Rs and dimensionless l/ls
         #The bessel function does little unless l is large.
-        integrand = lambda xx: ygas.y3d(xx) * xx * xx * scipy.special.j0(xx*ll/ls)
+        integrand = lambda xx: ygas.y3d(xx) * xx * xx * scipy.special.j0(xx*ll/l500)
         integrated,_ = scipy.integrate.quad(integrand, 0, limit)
 #         if err/integrated > 0.1:
 #             raise RuntimeError("Err in tsz integral: ",err, integrated)
         #Units:  dimensionless
-        return 4 * math.pi * Rs * integrated / ls**2
+        return 4 * math.pi * R500 * integrated / l500**2
 
     def bias(self,nu):
         """Formula for the bias of a halo, from Sheth-Tormen 1999."""
