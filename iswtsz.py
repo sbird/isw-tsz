@@ -9,6 +9,7 @@ import matplotlib
 matplotlib.use('PDF')
 import matplotlib.pyplot as plt
 import halo_mass_function as hm
+import concentration
 
 class LinearGrowth(object):
     """Class to store functions related to the linear growth factor and the Hubble flow."""
@@ -223,6 +224,7 @@ class TSZHalo(object):
         #speed of light in km/s
         self.light = 2.99e5
         self.overden = hm.Overdensities(0,omegam0, omegab0,1-omegam0,hubble, 0.97,sigma8,log_mass_lim=(10,18))
+        self.conc_model = concentration.LudlowConcentration(self.Dofz)
         self._rhocrit0 = self.overden.rhocrit(0)
         self.lingrowth = LinearGrowth(omegam0=omegam0, hub=hubble)
 
@@ -265,12 +267,34 @@ class TSZHalo(object):
         #Virial radius R500 in Mpc/h from the virial mass
         return np.cbrt(3 * mass / (4* math.pi* 500 * rhoc)) / self.hubble
 
+    def R200(self, mass):
+        """Get the virial radius in comoving Mpc for a given mass in Msun/h"""
+        #Units are Msun  h^2 / Mpc^3
+        rhoc = self._rhocrit0
+        #Virial radius R500 in Mpc/h from the virial mass
+        return np.cbrt(3 * mass / (4* math.pi* 200 * rhoc)) / self.hubble
+
+    def concentration(self,mass, aa):
+        """Compute the concentration for a halo mass"""
+        zz = 1./aa-1
+        nu = 1.686/self.overden.sigmaof_M(mass)
+        return self.conc_model.comoving_concentration(nu, zz)
+
+    def M500fromM200(self, mass,conc):
+        """Take a mass defined at 200 * virial and return one defined at 500 times virial, using an NFW profile."""
+        Rs = self.R200(mass) / conc
+        cr500 = (np.log(1+self.R500(mass)/Rs) - 1/(1+Rs/self.R500(mass)))
+        gc = np.log(1+conc) - conc/(1+conc)
+        return mass * cr500/gc
+
     def tsz_per_halo(self, M, aa,ll):
         """The 2D fourier transform of the projected Compton y-parameter, per halo.
         Eq 2 of Komatsu and Seljak 2002.
         Takes mass in units of Msun/h, is dimensionless. """
         #Get rid of factor of h
-        ygas = YYgasArnaud(M/self.hubble/1.2, self.hubble, 1/aa-1, self.omegam0)
+        conc = self.concentration(M, aa)
+        M500 = self.M500fromM200(M,conc)
+        ygas = YYgasArnaud(M500/self.hubble/1.2, self.hubble, 1/aa-1, self.omegam0)
         #Also no factor of h
         R500 = self.R500(M)/1.2**(1./3)
         l500 = (1e-12+self.lingrowth.angular_diameter(aa)) / R500
