@@ -185,7 +185,7 @@ class YYgas(object):
 
 class TSZHalo(object):
     """Extends the NFW halo calculation with equations for a tSZ profile."""
-    def __init__(self, omegam0 = 0.27, omegab0=0.0449, hubble = 0.7, sigma8=0.8, tszbias=1.):
+    def __init__(self, omegam0 = 0.279, omegab0=0.046, hubble = 0.7, sigma8=0.817, tszbias=1.):
         self.omegam0 = omegam0
         self.omegab0 = omegab0
         self.hubble = hubble
