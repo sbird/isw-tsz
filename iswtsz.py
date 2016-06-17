@@ -225,7 +225,8 @@ class TSZHalo(object):
         self.light = 2.99e5
         self.overden = hm.Overdensities(0,omegam0, omegab0,1-omegam0,hubble, 0.97,sigma8,log_mass_lim=(10,18))
         self.conc_model = concentration.LudlowConcentration(self.Dofz)
-        self._rhocrit0 = self.overden.rhocrit(0)
+        #Units are of overden.rhocrit are Msun  h^2 / Mpc^3 so convert to Msun / Mpc^3
+        self._rhocrit0 = self.overden.rhocrit(0) * self.hubble**2
         self.lingrowth = LinearGrowth(omegam0=omegam0, hub=hubble)
 
     def Dofz(self, zz):
@@ -242,17 +243,18 @@ class TSZHalo(object):
         return A * ( np.power((sigma / b), -a) + 1) * np.exp(-1 * c / sigma / sigma)
 
     def dndm_z_b(self, mass, aa, bias=True):
-        """Returns the halo mass function dn/dM in units of h^4 M_sun^-1 Mpc^-3
-        Requires mass in units of M_sun /h
+        """Returns the halo mass function dn/dM in units of M_sun^-1 Mpc^-3
+        Requires mass in units of M_sun
         (times by a halo bias)"""
-        # Mean matter density at redshift z in units of h^2 Msolar/Mpc^3
-        # This is the comoving density at redshift z in units of h^-1 M_sun (Mpc/h)^-3 (comoving)
+        # Mean matter density at redshift z in units of Msolar/Mpc^3
+        # This is the comoving density at redshift z in units of M_sun (Mpc)^-3 (comoving)
         # Compute as a function of the critical density at z=0.
-        rhom = self.overden.rhocrit(0) * self.omegam0
+        rhom = self._rhocrit0 * self.omegam0
         growth = self.lingrowth.lingrowthfac(aa)
-        sigma = self.overden.sigmaof_M(mass)*growth
+        #Convert mass to Msun/h
+        sigma = self.overden.sigmaof_M(mass*self.hubble)*growth
         mass_func = self.mass_function(sigma)
-        dlogsigma = self.overden.log_sigmaof_M(mass)*growth/mass
+        dlogsigma = self.overden.log_sigmaof_M(mass*self.hubble)*growth/mass
         #We have dn / dM = - d ln sigma /dM rho_0/M f(sigma)
         dndM = - dlogsigma*mass_func/mass*rhom
         if bias:
@@ -261,23 +263,23 @@ class TSZHalo(object):
         return dndM
 
     def R500(self, mass):
-        """Get the virial radius in comoving Mpc for a given mass in Msun/h"""
-        #Units are Msun  h^2 / Mpc^3
+        """Get the virial radius in comoving Mpc for a given mass in Msun"""
+        #Units are Msun  / Mpc^3
         rhoc = self._rhocrit0
-        #Virial radius R500 in Mpc/h from the virial mass
-        return np.cbrt(3 * mass / (4* math.pi* 500 * rhoc)) / self.hubble
+        #Virial radius R500 in Mpc from the virial mass
+        return np.cbrt(3 * mass / (4* math.pi* 500 * rhoc))
 
     def R200(self, mass):
-        """Get the virial radius in comoving Mpc for a given mass in Msun/h"""
-        #Units are Msun  h^2 / Mpc^3
+        """Get the virial radius in comoving Mpc for a given mass in Msun"""
+        #Units are Msun  / Mpc^3
         rhoc = self._rhocrit0
-        #Virial radius R500 in Mpc/h from the virial mass
-        return np.cbrt(3 * mass / (4* math.pi* 200 * rhoc)) / self.hubble
+        #Virial radius R500 in Mpc from the virial mass
+        return np.cbrt(3 * mass / (4* math.pi* 200 * rhoc))
 
     def concentration(self,mass, aa):
         """Compute the concentration for a halo mass"""
         zz = 1./aa-1
-        nu = 1.686/self.overden.sigmaof_M(mass)
+        nu = 1.686/self.overden.sigmaof_M(mass*self.hubble)
         return self.conc_model.comoving_concentration(nu, zz)
 
     def M500fromM200(self, mass,conc):
@@ -290,11 +292,11 @@ class TSZHalo(object):
     def tsz_per_halo(self, M, aa,ll):
         """The 2D fourier transform of the projected Compton y-parameter, per halo.
         Eq 2 of Komatsu and Seljak 2002.
-        Takes mass in units of Msun/h, is dimensionless. """
+        Takes mass in units of Msun, is dimensionless. """
         #Get rid of factor of h
         conc = self.concentration(M, aa)
         M500 = self.M500fromM200(M,conc)
-        ygas = YYgasArnaud(M500/self.hubble/1.2, self.hubble, 1/aa-1, self.omegam0)
+        ygas = YYgasArnaud(M500/1.2, self.hubble, 1/aa-1, self.omegam0)
         #Also no factor of h
         R500 = self.R500(M)/1.2**(1./3)
         l500 = (1e-12+self.lingrowth.angular_diameter(aa)) / R500
@@ -329,8 +331,8 @@ class TSZHalo(object):
         """Integrand for the tSZ mass integral. Units of 1/Mpc^3"""
         yl = self.tsz_per_halo(MM, aa, ll)
         dndm_b = self.dndm_z_b(MM, aa, bias=twoh)
-        #Units: Msun/h      (Mpc/h)-3/(Msun/h)
-        integrand = MM * yl * dndm_b * self.hubble**3
+        #Units: Msun      (Mpc)-3/(Msun)
+        integrand = MM * yl * dndm_b
         if not twoh:
             integrand *= yl
         return integrand
@@ -373,8 +375,8 @@ class TSZHalo(object):
         #This is the Limber approximation: 1/Mpc
         kk = self.kk_limber(aa, lmode)
         #Convert k into h/Mpc and convert the result from (Mpc/h)**3 to Mpc**3
-        PofKMpc = self.overden.PofK(kk/self.hubble) * self.hubble**3
-        #Functions are 1/Mpc**2
+        PofKMpc = self.overden.PofK(kk/self.hubble) / self.hubble**3
+       #Functions are 1/Mpc**2
         return PofKMpc *self.light / self.H0 / self.lingrowth.hzoverh0(aa)/aa**2
 
     def kk_limber(self, aa, lmode):
