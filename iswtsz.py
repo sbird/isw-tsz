@@ -10,6 +10,7 @@ matplotlib.use('PDF')
 import matplotlib.pyplot as plt
 import halo_mass_function as hm
 import concentration
+import camb
 
 class LinearGrowth(object):
     """Class to store functions related to the linear growth factor and the Hubble flow."""
@@ -22,8 +23,6 @@ class LinearGrowth(object):
         self._growths = np.array([self._generate_lingrowthfac(aa)/aa for aa in self._aaa])
         #Normalise to z=0.
         self._lingrowthfac=scipy.interpolate.InterpolatedUnivariateSpline(self._aaa,self._growths)
-        self._ang_diam = np.array([self._angular_diameter(aa) for aa in self._aaa])
-        self.angular_diameter = scipy.interpolate.InterpolatedUnivariateSpline(self._aaa,self._ang_diam)
 
     def hzoverh0(self, a):
         """ returns: H(a) / H0  = [omegam/a**3 + (1-omegam)]**0.5 """
@@ -37,34 +36,6 @@ class LinearGrowth(object):
     def _lingrowthintegrand(self, a):
         """ (e.g. eq. 8 in lukic et al. 2008)   returns: da / [a*H(a)/H0]**3 """
         return np.power(a * self.hzoverh0(a),-3)
-
-    def _ang_diam_integrand(self, aa):
-        """Integrand for the ang. diam distance: 1/a^2 H(a)"""
-        return 1./(aa**2*self.hzoverh0(aa))
-
-    def _conf_time_integrand(self, aa):
-        """Integrand for the conformal time: 1/H(a)"""
-        return 1./self.hzoverh0(aa)
-
-    def _generate_conformal_time(self, aa):
-        """Conformal time to scale factor a: int(1/H da).
-        This is dimensionless; to get dimensionful value divide by H0."""
-        conf, err = scipy.integrate.quad(self._conf_time_integrand, aa, 1.)
-        if err/(conf+0.01) > 0.1:
-            raise RuntimeError("Err in angular diameter: ",err)
-        return conf
-
-    def _angular_diameter(self, aa):
-        """The angular diameter distance to some redshift in units of comoving Mpc."""
-        #speed of light in km/s
-        light = 2.99e5
-        #Dimensionless comoving distance
-        comoving,err = scipy.integrate.quad(self._ang_diam_integrand, aa, 1)
-        if err/(comoving+0.01) > 0.1:
-            raise RuntimeError("Err in angular diameter: ",err)
-        #angular diameter distance
-        H0 = self.hub * 100 # km/s/Mpc
-        return comoving * light * aa / H0
 
     def _generate_lingrowthfac(self, aa):
         """
@@ -229,6 +200,27 @@ class TSZHalo(object):
         self._rhocrit0 = self.overden.rhocrit(0) * self.hubble**2
         self.lingrowth = LinearGrowth(omegam0=omegam0, hub=hubble)
 
+        #Code to get power spectrum interpolator from CAMB.
+        pars = camb.CAMBparams()
+        #This function sets up CosmoMC-like settings, with one massive neutrino and helium set using BBN consistency
+        pars.set_cosmology(H0=hubble*100, ombh2=omegab0*hubble**2, omch2=(omegam0-omegab0)*hubble**2, mnu=0., omk=0, tau=0.06)
+        pars.InitPower.set_params(As=2.445e-9, ns=0.96, r=0)
+        pars.set_matter_power(redshifts=[0,], kmax=10, silent=True)
+        self.CAMBresults = camb.get_results(pars)
+        kh, _, pk = self.CAMBresults.get_linear_matter_power_spectrum(hubble_units=False, nonlinear=False)
+        #Set units to 1/Mpc from h/Mpc
+        kh *= pars.H0 / 100
+        self._PofK = scipy.interpolate.InterpolatedUnivariateSpline(np.log(kh),np.log(pk))
+
+    def PofK(self, kk):
+        """Get interpolated power spectrum."""
+        return np.exp(self._PofK(np.log(kk)))
+
+    def angular_diameter(self, aa):
+        """Get angular diameter distance from CAMB"""
+        ang_diam = self.CAMBresults.angular_diameter_distance(1/aa-1.)
+        return ang_diam
+
     def Dofz(self, zz):
         """Helper"""
         aa = 1./(1+zz)
@@ -340,7 +332,7 @@ class TSZHalo(object):
     def tsz_2h_window_function_limber(self, aa, ll):
         """The 2-halo window function for the tSZ that appears in the C_l if we use the Limber approximation.
         This gets rid of the spherical bessels."""
-        rr = self.lingrowth.angular_diameter(aa)
+        rr = self.angular_diameter(aa)
         Dplus = self.lingrowth.lingrowthfac(aa)
         Tmass = self.tsz_mass_integral(aa, ll,twoh=True)
         return Tmass * Dplus * rr
@@ -348,7 +340,7 @@ class TSZHalo(object):
     def _tsz_1h_integrand(self, aa, ll):
         """The 1-halo integrand for the tSZ in the Limber approximation"""
         Tmass = self.tsz_mass_integral(aa, ll,twoh=False)
-        rr = self.lingrowth.angular_diameter(aa)
+        rr = self.angular_diameter(aa)
         return self.light / self.H0 / self.lingrowth.hzoverh0(aa) * Tmass * rr**2 /aa**2
 
     def tsz_1h_limber(self, lmode, minz=0.):
@@ -366,7 +358,7 @@ class TSZHalo(object):
         #5/2 omega_M / (H^2 a^4) + D+ /a ( H'/H - 1 /a)
         #Zero if H  = omega_M a^-3/2, D+ ~ a as H'/H ~ -3/2 / a
         Dplusda = - aa**2 * self.lingrowth.Dplusda(aa)
-        rr = self.lingrowth.angular_diameter(aa)
+        rr = self.angular_diameter(aa)
         #Units:                 Mpc^-2
         return 3 * self.H0**3 / self.light**3 * self.omegam0 / ll**2 * rr * Dplusda * self.lingrowth.hzoverh0(aa)
 
@@ -374,16 +366,16 @@ class TSZHalo(object):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
         #This is the Limber approximation: 1/Mpc
         kk = self.kk_limber(aa, lmode)
-        #Convert k into h/Mpc and convert the result from (Mpc/h)**3 to Mpc**3
-        PofKMpc = self.overden.PofK(kk/self.hubble) / self.hubble**3
-       #Functions are 1/Mpc**2
+        #Units are Mpc^3, see constructor
+        PofKMpc = self.PofK(kk)
+        #Functions are 1/Mpc**2
         return PofKMpc *self.light / self.H0 / self.lingrowth.hzoverh0(aa)/aa**2
 
     def kk_limber(self, aa, lmode):
         """Compute the k-mode value for a given l in the limber approximation."""
-        rr = self.lingrowth.angular_diameter(aa)
+        rr = self.angular_diameter(aa)
         #This is the Limber approximation
-        kk = (lmode + 1/2) / (rr+1e-12)
+        kk = (lmode + 1/2) / (rr+1e-20)
         return kk
 
     def crosscorr(self, lmode, func1, func2=None, minz=0.):
@@ -399,7 +391,7 @@ class TSZHalo(object):
 
     def tszzweighted(self, ll, minz=0.):
         """Find the weighted mean redshift of the tSZ integral"""
-        normfunc = lambda aa: self.tsz_2h_window_function_limber(aa, ll)/((1e-12+self.lingrowth.angular_diameter(aa))*self.lingrowth.hzoverh0(aa))/aa**2
+        normfunc = lambda aa: self.tsz_2h_window_function_limber(aa, ll)/((1e-12+self.angular_diameter(aa))*self.lingrowth.hzoverh0(aa))/aa**2
         (norm, err) = scipy.integrate.quad(normfunc, 0.2, 1/(1+minz))
         if err / (norm+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
@@ -426,10 +418,7 @@ def make_plots():
     #This is the default unit of CAMB and puts the Cls
     #into microKelvin squared. ( 2.726 * 10^6 )^2
     cmboutputscale = 7.4311e12
-    ll = np.arange(2,maxl,2)
-    scalCls = np.loadtxt("test_scalCls.dat")
-    cmb = scalCls[:maxl-2:2,1]
-    assert np.shape(cmb) == np.shape(ll)
+    ll = np.concatenate([np.arange(2,10,1),np.arange(10,40,2),np.arange(40,100,10),np.arange(100,maxl,25)])
     ttisw = TSZHalo()
     tsz1h =  cmboutputscale * np.array([ttisw.tsz_1h_limber(l) for l in ll])
     tsztsz = cmboutputscale * np.array([ttisw.crosscorr(l, ttisw.tsz_2h_window_function_limber) for l in ll])
@@ -439,9 +428,11 @@ def make_plots():
     plt.loglog(ll, iswisw, label="ISW",ls="--")
     plt.loglog(ll, iswtsz, label="ISW-tSZ",ls="-")
     plt.loglog(ll, tsz1h, label="tSZ 1h", ls=":")
-    plt.loglog(ll, cmb, label="CMB", ls="-.")
+    scalCls = np.loadtxt("test_scalCls.dat")
+    cmb = scalCls[:maxl-2:2,1]
+    plt.loglog(np.arange(2,maxl,2), cmb, label="CMB", ls="-.")
     plt.legend(loc=0,ncol=2)
-    plt.xlim(4,maxl)
+    plt.xlim(2,maxl)
     plt.xlabel("$l$")
     plt.ylabel(r"$(l (l+1) / (2\pi) ) C_\mathrm{l}$")
     plt.savefig("ISWtsz.pdf")
@@ -450,7 +441,7 @@ def make_plots():
     #Plot redshift dependence
     aaa = np.linspace(0.5, 0.99, 80)
     #Multiply by sqrt(r*H)
-    rrHz = lambda aa : (1e-12+ttisw.lingrowth.angular_diameter(aa))*ttisw.lingrowth.hzoverh0(aa)
+    rrHz = lambda aa : (1e-12+ttisw.angular_diameter(aa))*ttisw.lingrowth.hzoverh0(aa)
     tszzz = np.array([a**2*ttisw.tsz_2h_window_function_limber(a, 20)/np.sqrt(rrHz(a)) for a in aaa])
     tsznorm = np.trapz(tszzz, 1/aaa-1.)
     plt.plot(1/aaa-1., -tszzz/tsznorm, label="tSZ", ls="--")
