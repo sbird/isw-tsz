@@ -24,6 +24,10 @@ class LinearGrowth(object):
         #Normalise to z=0.
         self._lingrowthfac=scipy.interpolate.InterpolatedUnivariateSpline(self._aaa,self._growths)
 
+    def Hofz(self, a):
+        """Returns hubble at a"""
+        return self.hub * 100 * self.hzoverh0(a)
+
     def hzoverh0(self, a):
         """ returns: H(a) / H0  = [omegam/a**3 + (1-omegam)]**0.5 """
         return np.sqrt(self.h2overh0(a))
@@ -31,7 +35,7 @@ class LinearGrowth(object):
     def h2overh0(self, a):
         """ returns: H^2(a) / H0^2  = [omegam/a**3 + (1-omegam)]"""
         #Include correction for w0,wa models. Note the a dependence disappears if w0, wa =-1,0
-        return self.omegam0/a**3 + (1.-self.omegam0)*a**(-3*(1+self.w0+self.wa))*np.exp(-3*self.wa*(1-a))
+        return self.omegam0/a**3 + (1.-self.omegam0) #*a**(-3*(1+self.w0+self.wa))*np.exp(-3*self.wa*(1-a))
 
     def _lingrowthintegrand(self, a):
         """ (e.g. eq. 8 in lukic et al. 2008)   returns: da / [a*H(a)/H0]**3 """
@@ -56,10 +60,6 @@ class LinearGrowth(object):
     def lingrowthfac(self, aa):
         """Growth function, using the interpolator where we can, otherwise doing it for real."""
         growth = self._lingrowthfac(aa)*aa
-        #if aa > self._aaa[0]:
-            #growth = self._lingrowthfac(aa)*aa
-        #else:
-            #growth = self._generate_lingrowthfac(aa)
         return growth / self._lingrowthfac(1.)
 
     def EprimebyE(self, aa):
@@ -209,7 +209,7 @@ class TSZHalo(object):
         self.CAMBresults = camb.get_results(pars)
         kh, _, pk = self.CAMBresults.get_linear_matter_power_spectrum(hubble_units=False, nonlinear=False)
         #Set units to 1/Mpc from h/Mpc
-        kh *= pars.H0 / 100
+        kh *= self.hubble
         self._PofK = scipy.interpolate.InterpolatedUnivariateSpline(np.log(kh),np.log(pk))
 
     def PofK(self, kk):
@@ -285,24 +285,26 @@ class TSZHalo(object):
         """The 2D fourier transform of the projected Compton y-parameter, per halo.
         Eq 2 of Komatsu and Seljak 2002.
         Takes mass in units of Msun, is dimensionless. """
-        #Get rid of factor of h
         conc = self.concentration(M, aa)
         M500 = self.M500fromM200(M,conc)
+#         rhogas_cos = (self.omegab0  / self.omegam0) * 200 * self._rhocrit0
+#         ygas = YYgas(conc, M/self.hubble, rhogas_cos*self.hubble**2, self.R200(M))
         ygas = YYgasArnaud(M500/1.2, self.hubble, 1/aa-1, self.omegam0)
         #Also no factor of h
+#         R500 = self.R200(M)/conc
         R500 = self.R500(M)/1.2**(1./3)
-        l500 = (1e-12+self.lingrowth.angular_diameter(aa)) / R500
+        l500 = self.angular_diameter(aa) / R500
         #Cutoff when the integrand becomes oscillatory.
         limit = 6 #60*math.pi*ls/ll
         #Integrand of the TSZ profile from Komatsu & Seljak 2002 eq. 2.
         #Units are 1/Mpc. Takes dimensionless r/Rs and dimensionless l/ls
         #The bessel function does little unless l is large.
-        integrand = lambda xx: ygas.y3d(xx) * xx * xx * scipy.special.j0(xx*ll/l500)
-        integrated,_ = scipy.integrate.quad(integrand, 0, limit)
-#         if err/integrated > 0.1:
-#             raise RuntimeError("Err in tsz integral: ",err, integrated)
+        integrand = lambda xx: ygas.y3d(xx) * xx * np.sin(xx*ll/l500)
+        integrated,err = scipy.integrate.quad(integrand, 0, limit,epsabs=1e-12,limit=150)
+        if err/integrated > 0.1:
+            raise RuntimeError("Err in tsz integral: ",err, integrated)
         #Units:  dimensionless
-        return 4 * math.pi * R500 * integrated / l500**2
+        return 4 * math.pi * R500 * integrated / (l500 *ll)
 
     def bias(self,nu):
         """Formula for the bias of a halo, from Sheth-Tormen 1999."""
@@ -313,14 +315,16 @@ class TSZHalo(object):
     def tsz_mass_integral(self, aa, ll, mass=(1e12, 1e16), twoh=True):
         """Formula for the mass integral of the tSZ power, Taburet 2010, 1012.5036.
         Units of h/Mpc"""
-        integrand = lambda lmass: self._tsz_mass_integrand(np.exp(lmass), aa, ll, twoh=twoh)
-        (integrated, err) = scipy.integrate.quad(integrand, np.log(mass[0]), np.log(mass[1]))
+        integrand = lambda lmass: self._tsz_mass_integrand(lmass, aa, ll, twoh=twoh)
+        (integrated, err) = scipy.integrate.quad(integrand, np.log(mass[0]), np.log(mass[1]),epsabs=1e-11,limit=150)
+        assert integrated >= 0
         if err/(integrated+0.01) > 0.1:
             raise RuntimeError("Err in tsz mass integral: ",err," total:",integrated)
         return integrated
 
-    def _tsz_mass_integrand(self, MM, aa, ll,twoh=True):
+    def _tsz_mass_integrand(self, logM, aa, ll,twoh=True):
         """Integrand for the tSZ mass integral. Units of 1/Mpc^3"""
+        MM = np.exp(logM)
         yl = self.tsz_per_halo(MM, aa, ll)
         dndm_b = self.dndm_z_b(MM, aa, bias=twoh)
         #Units: Msun      (Mpc)-3/(Msun)
@@ -337,17 +341,17 @@ class TSZHalo(object):
         Tmass = self.tsz_mass_integral(aa, ll,twoh=True)
         return Tmass * Dplus * rr
 
-    def _tsz_1h_integrand(self, aa, ll):
+    def _tsz_1h_integrand(self, zz, ll):
         """The 1-halo integrand for the tSZ in the Limber approximation"""
+        aa = 1/(1+zz)
         Tmass = self.tsz_mass_integral(aa, ll,twoh=False)
         rr = self.angular_diameter(aa)
-        return self.light / self.H0 / self.lingrowth.hzoverh0(aa) * Tmass * rr**2 /aa**2
+        return self.light / self.lingrowth.Hofz(aa) * Tmass * rr**2
 
-    def tsz_1h_limber(self, lmode, minz=0.):
+    def tsz_1h_limber(self, lmode, minz=0.0038):
         """The 2-halo window function for the tSZ that appears in the C_l if we use the Limber approximation.
         This gets rid of the spherical bessels."""
-        amax = 1/(1+minz)
-        (cll, err) = scipy.integrate.quad(self._tsz_1h_integrand, 0.2, amax, args=lmode)
+        (cll, err) = scipy.integrate.quad(self._tsz_1h_integrand, minz, 5., args=lmode,epsabs=1e-13)
         if err / (cll+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
         return (lmode*(lmode+1))/2/math.pi*cll
@@ -360,16 +364,17 @@ class TSZHalo(object):
         Dplusda = - aa**2 * self.lingrowth.Dplusda(aa)
         rr = self.angular_diameter(aa)
         #Units:                 Mpc^-2
-        return 3 * self.H0**3 / self.light**3 * self.omegam0 / ll**2 * rr * Dplusda * self.lingrowth.hzoverh0(aa)
+        return 3 * self.H0**2 / self.light**3 * self.omegam0 / ll**2 * rr * Dplusda * self.lingrowth.Hofz(aa)
 
-    def _crosscorr_integrand(self, aa, lmode):
+    def _crosscorr_integrand(self, zz, lmode):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
         #This is the Limber approximation: 1/Mpc
+        aa = 1/(1+zz)
         kk = self.kk_limber(aa, lmode)
         #Units are Mpc^3, see constructor
         PofKMpc = self.PofK(kk)
         #Functions are 1/Mpc**2
-        return PofKMpc *self.light / self.H0 / self.lingrowth.hzoverh0(aa)/aa**2
+        return PofKMpc *self.light / self.lingrowth.Hofz(aa)
 
     def kk_limber(self, aa, lmode):
         """Compute the k-mode value for a given l in the limber approximation."""
@@ -378,20 +383,20 @@ class TSZHalo(object):
         kk = (lmode + 1/2) / (rr+1e-20)
         return kk
 
-    def crosscorr(self, lmode, func1, func2=None, minz=0.):
+    def crosscorr(self, lmode, func1, func2=None, minz=0.0038):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
         if func2 != None:
-            integrand = lambda aa: func2(aa,lmode) * func1(aa, lmode)*self._crosscorr_integrand(aa, lmode)
+            integrand = lambda zz: func2(1/(1+zz),lmode) * func1(1/(1+zz), lmode)*self._crosscorr_integrand(zz, lmode)
         else:
-            integrand = lambda aa: func1(aa,lmode)**2 * self._crosscorr_integrand(aa, lmode)
-        (cll, err) = scipy.integrate.quad(integrand, 0.2, 1/(1+minz))
+            integrand = lambda zz: func1(1/(1+zz),lmode)**2 * self._crosscorr_integrand(zz, lmode)
+        (cll, err) = scipy.integrate.quad(integrand, minz, 5)
         if err / (cll+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
         return (lmode*(lmode+1))/2/math.pi*cll
 
     def tszzweighted(self, ll, minz=0.):
         """Find the weighted mean redshift of the tSZ integral"""
-        normfunc = lambda aa: self.tsz_2h_window_function_limber(aa, ll)/((1e-12+self.angular_diameter(aa))*self.lingrowth.hzoverh0(aa))/aa**2
+        normfunc = lambda aa: self.tsz_2h_window_function_limber(aa, ll)/((1e-12+self.angular_diameter(aa))*self.lingrowth.Hofz(aa))/aa**2
         (norm, err) = scipy.integrate.quad(normfunc, 0.2, 1/(1+minz))
         if err / (norm+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
@@ -441,7 +446,7 @@ def make_plots():
     #Plot redshift dependence
     aaa = np.linspace(0.5, 0.99, 80)
     #Multiply by sqrt(r*H)
-    rrHz = lambda aa : (1e-12+ttisw.angular_diameter(aa))*ttisw.lingrowth.hzoverh0(aa)
+    rrHz = lambda aa : (1e-12+ttisw.angular_diameter(aa))*ttisw.lingrowth.Hofz(aa)
     tszzz = np.array([a**2*ttisw.tsz_2h_window_function_limber(a, 20)/np.sqrt(rrHz(a)) for a in aaa])
     tsznorm = np.trapz(tszzz, 1/aaa-1.)
     plt.plot(1/aaa-1., -tszzz/tsznorm, label="tSZ", ls="--")
