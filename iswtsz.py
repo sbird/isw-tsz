@@ -299,12 +299,12 @@ class TSZHalo(object):
         #Integrand of the TSZ profile from Komatsu & Seljak 2002 eq. 2.
         #Units are 1/Mpc. Takes dimensionless r/Rs and dimensionless l/ls
         #The bessel function does little unless l is large.
-        integrand = lambda xx: ygas.y3d(xx) * xx * np.sin(xx*ll/l500)
+        integrand = lambda xx: ygas.y3d(xx) * xx * np.sin(xx*(ll+1/2)/l500)
         integrated,err = scipy.integrate.quad(integrand, 0, limit,epsabs=1e-12,limit=150)
         if err/integrated > 0.1:
             raise RuntimeError("Err in tsz integral: ",err, integrated)
         #Units:  dimensionless
-        return 4 * math.pi * R500 * integrated / (l500 *ll)
+        return 4 * math.pi * R500 * integrated / (l500 *(ll+1/2))
 
     def bias(self,nu):
         """Formula for the bias of a halo, from Sheth-Tormen 1999."""
@@ -364,7 +364,7 @@ class TSZHalo(object):
         Dplusda = - aa**2 * self.lingrowth.Dplusda(aa)
         rr = self.angular_diameter(aa)
         #Units:                 Mpc^-2
-        return 3 * self.H0**2 / self.light**3 * self.omegam0 / ll**2 * rr * Dplusda * self.lingrowth.Hofz(aa)
+        return 3 * self.H0**2 / self.light**3 * self.omegam0 / (ll+1/2)**2 * rr * Dplusda * self.lingrowth.Hofz(aa)
 
     def _crosscorr_integrand(self, zz, lmode):
         """Compute the cross-correlation of the ISW and tSZ effect using the limber approximation."""
