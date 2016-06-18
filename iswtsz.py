@@ -394,7 +394,7 @@ class TSZHalo(object):
             raise RuntimeError("Err in C_l computation: ",err)
         return (lmode*(lmode+1))/2/math.pi*cll
 
-    def tszzweighted(self, ll, minz=0.):
+    def tszzweighted(self, ll, minz=0.0038):
         """Find the weighted mean redshift of the tSZ integral"""
         normfunc = lambda aa: self.tsz_2h_window_function_limber(aa, ll)/((1e-12+self.angular_diameter(aa))*self.lingrowth.Hofz(aa))/aa**2
         (norm, err) = scipy.integrate.quad(normfunc, 0.2, 1/(1+minz))
@@ -407,12 +407,12 @@ class TSZHalo(object):
         assert 0 <= tot/norm < 2.5
         return tot/norm
 
-    def dClbydeps(self,ll, meanz=-1, minz=0.):
+    def dClbydeps(self,ll, meanz=-1, minz=0.0038):
         """Find the derivative of C_l by the small epsilon redshift parameter."""
         if meanz < 0:
             meanz = self.tszzweighted(ll)
-        integrand = lambda aa: (1/aa-1-meanz)*self._crosscorr_integrand(aa, ll)*self.tsz_2h_window_function_limber(aa,ll)*self.isw_window_function_limber(aa,ll)
-        (cll, err) = scipy.integrate.quad(integrand, 0.2, 1/(1+minz))
+        integrand = lambda zz: (zz-meanz)*self._crosscorr_integrand(zz, ll)*self.tsz_2h_window_function_limber(1/(1+zz),ll)*self.isw_window_function_limber(1/(1+zz),ll)
+        (cll, err) = scipy.integrate.quad(integrand, minz, 5.)
         if err / (cll+0.01) > 0.1:
             raise RuntimeError("Err in C_l computation: ",err)
         return (ll*(ll+1))/(2*math.pi)*cll
@@ -439,6 +439,7 @@ def make_plots():
     plt.loglog(np.arange(2,maxl,2), cmb, label="CMB", ls="-.")
     plt.legend(loc=0,ncol=2)
     plt.xlim(2,maxl)
+    plt.ylim(1e-5,5e3)
     plt.xlabel("$l$")
     plt.ylabel(r"$(l (l+1) / (2\pi) ) C_\mathrm{l}$")
     plt.savefig("ISWtsz.pdf")
