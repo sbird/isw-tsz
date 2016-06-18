@@ -1,4 +1,4 @@
-\documentclass[aps,twocolumn,floats,prd,nofootinbib]{revtex4-1}
+\documentclass[aps,twocolumn,floats,prd,nofootinbib,10pt,floatfix]{revtex4-1}
 
 
 \usepackage[dvips]{graphicx} % 
@@ -108,9 +108,10 @@ Sunyaev-Zeldovich (tSZ) effect are both due to line-of-sight
 density perturbations.  Here we calculate the cross-correlation
 between these two signals.  Measurement of this
 cross-correlation can be used to test the redshift distribution
-of the tSZ distortion.  We also evaluate the detectability of a
-$yT$ cross-correlation from exotic early-Universe sources in the
-presence of this late-time effect.
+of the tSZ distortion, which has implications for the redshift at which 
+astrophysical processes in clusters begin to operate.  We also evaluate 
+the detectability of a $yT$ cross-correlation from exotic early-Universe 
+sources in the presence of this late-time effect.
 \end{abstract}
 %\date{\today}
 
@@ -160,7 +161,17 @@ density-perturbation amplitudes.  Ingredients of these models
 include nonlinear evolution of primordial perturbations, gas
 dynamics, and feedback processes, all of which can become quite
 complicated.  Any empirical handle on this physics would
-therefore be useful.
+therefore be useful. To quantify how well the cross-correlation
+can constrain these processes, we introduce a parameter, 
+$\epsilon$, which describes the peak redshift of the cross-correlation 
+signal. If clusters were to develop a hot envelope earlier than currently 
+expected from theory, $\epsilon$ would increase. We design this 
+parameter so that it does not affect the tSZ signal, merely the 
+cross-correlation. Using our formalism we quantify
+how well the cross-correlation breaks the degeneracy between 
+structure formation parameters (such as the amplitude of 
+fluctuations, $\sigma_8$) and the astrophysical processes which
+lead to the halo pressure profile.
 
 The second motivation involves the search for exotic
 early-Universe physics.  Recent work has shown that primordial
@@ -248,12 +259,12 @@ Using Eqs.~(\ref{eqn:isw}), (\ref{eqn:phik}), and
 (\ref{eqn:Limber}), we find the power spectrum for ISW-induced
 temperature fluctuations to be,
 \begin{eqnarray}
-     C_l & = & \left(\frac{3 \Omega_m H_0^2}{c^3} \right)^2
-     \frac{c}{l^4} \int r^2  dr \left[ H(z) \frac{d}{dz}
+     C_l & = & \left(\frac{3 \Omega_m H_0^2}{c^3 (l+1/2)^2} \right)^2
+     c \int r^2  dr \left[ H(z) \frac{d}{dz}
      \left( \frac{D(z)}{a(z)} \right) \right]^2 P\left(k
      \right) \nonumber \\ 
-        & = & \left(\frac{3 \Omega_m H_0^2}{c^3} \right)^2
-     \frac{c}{l^4} \int  dz H(z) \left[r(z) \frac{d}{dz}
+        & = & \left(\frac{3 \Omega_m H_0^2}{c^3(l+1/2)^2} \right)^2
+     \int  c\,dz H(z) \left[r(z) \frac{d}{dz}
      \left( \frac{D(z)}{a(z)} \right) \right]^2 P\left(k
      \right) \nonumber \\
      & = &  \int \frac{c\, dz}{H(z)} \left[ \Delta^{\rm
@@ -265,7 +276,7 @@ Note that we used the relation $dz = -(H/c) dr$ to get from the
 first to the second line in Eq.~(\ref{eqn:Clisw}), and we have
 defined in the last line the ISW transfer function,
 \begin{equation}
-     \Delta^{\rm isw}_l(z) = \frac{3 \Omega_m H_0^2}{c^3 l^2}
+     \Delta^{\rm isw}_l(z) = \frac{3 \Omega_m H_0^2}{c^3 (l+1/2)^2}
      r(z) H(z) \frac{d}{dz}
      \left( \frac{D(z)}{a(z)} \right).
 \label{eqn:iswtransfer}
@@ -332,9 +343,12 @@ Here, $y_l(M,z)$ is the 2d Fourier transform of the
 Compton-$y$ image, on the sky, of a cluster of mass $M$ at
 redshift $z$ and is given in terms of the electron pressure
 profile $P_e(M,z;x)$, as a function of scale radius $x$ in the
-cluster.
+cluster. We neglect relativistic effects, which are second-order 
+for our purposes \cite{Itoh:1997ks}.
 We use for our numerical work the electron-pressure profiles of
-Ref.~\cite{Komatsu:2002wc}. We assume the halo mass function 
+Ref.~\cite{Nagai:2007mt, Arnaud:2009tt} with the parameters 
+described in \cite{Dolag:2015dta}. We assume the halo mass function 
+We assume the halo mass function 
 of Ref.~\cite{Tinker:2008ff} and the halo bias of
 Ref.~\cite{Sheth:1999mn}.
 
@@ -352,7 +366,9 @@ in the number of clusters.  This is
 \label{eqn:Cly1h}
 \end{equation}
 The total $y$-parameter power spectrum is $C_l^{yy} =
-C_l^{yy,1h}+C_l^{yy,2h}$.  
+C_l^{yy,1h}+C_l^{yy,2h}$.  To avoid our signal being dominated by
+unphysical $z\sim 0$ objects, we place a lower integration limit 
+of $z=0.0038$, the redshift of the COMA cluster.
 
 \subsection{ISW-tSZ cross-correlation}
 
@@ -391,7 +407,7 @@ critical density for collapse of $\delta_c = 1.686$, and
 dimensionless Hubble parameter $h= 0.701$, although the
 large-angle results that will be our primary focus are largely
 insensitive to these details. In practice, we find that over ninety percent 
-of the contribution comes from the redshfit range $z = 0-3$ and the halo mass range 
+of the contribution comes from the redshift range $z = 0-3$ and the halo mass range 
 $10^{13}\,M_\odot$ and $10^{15}\,M_\odot$. 
 We therefore integrate over slightly wider ranges; $z=0 - 4$  
 and halo mass $10^{12}\,M_\odot$ and $10^{16}\,M_\odot$.
@@ -401,22 +417,22 @@ autocorrelation, the $yT$ cross-correlation, and the one- and
 two-halo contributions to the $yy$ power spectra are easy to
 understand qualitatively.  Let us begin with the ISW effect.  Here, the
 $l$ dependence of the transfer function is $\Delta^{\rm isw}_l
-\propto l$, and for large angles ($l\lesssim 100$), the power
+\propto l^{-2}$, and for large angles ($l\lesssim 20$), the power
 spectrum is $P(l/r) \propto l$, assuming $l+1/2 \approx l$.  As a result, $l^2C_l^{\rm isw}
-\propto l^{-1}$ for $l \lesssim 100$.  Next consider the tSZ
+\propto l^{-1}$ for $l \lesssim 20$.  Next consider the tSZ
 power spectra.  Galaxy clusters subtend a broad distribution of
-angular sizes but are rarely wider than a degree.  Thus, for $l
-\lesssim 100$, they are effectively point sources.  The
+angular sizes but are rarely wider than a degree.  Thus, for 
+$l \lesssim 20$, they are effectively point sources.  The
 Fourier transform is thus effectively approximated by $y_l(M,z)
 \simeq y_{l=0}(M,z)$ which is itself precisely the integral of
 the $y$-distortion over the cluster image on the sky, or
 equivalently, the total contribution of the cluster to the
 angle-averaged $y$.  As a result of the independence of $y_l$ on
-$l$ and $P(l/r) \propto l$ for $l\gtrsim100$, we infer
+$l$ and $P(l/r) \propto l$ for $l \lesssim 20$, we infer
 $l^2 C_l^{yy,2h} \propto l$ and $l^2 C_l^{yT} \propto $~const for
-$l\lesssim 100$.  Finally, the one-halo contribution to
+$l\lesssim 20$.  Finally, the one-halo contribution to
 $C_l^{yy}$ is nearly constant (i.e., $l^2C_l\propto l^2$) for
-$l\lesssim 100$ as expected for Poisson fluctuations in what are
+$l\lesssim 20$ as expected for Poisson fluctuations in what are
 (at these angular scales) effectively point sources.
 
 \section{SZ redshift distribution}
@@ -546,19 +562,30 @@ fluctuations.  We may thus approximate
 \end{equation}
 
 The smallest detectable value of $\epsilon$ evaluates to
-$\sigma_\epsilon \simeq 9$, for $z_0 = 0.55$. This is still
-a considerable uncertainty, but the signal to noise can be
+$\sigma_\epsilon \simeq 4$, for $z_0 = 0.04$. 
+This is still a considerable uncertainty, but the signal to noise can be
 increased.  While the majority of the cross-correlation signal
 is at low redshifts, the 1-halo tSZ term, which appears as noise
 in Eq.~(\ref{eqn:noise}), peaks even more strongly at low
 redshift. Thus the lowest-redshift bins are substantially noise
-dominated. If we remove all information at redshifts $z < 0.3$,
+dominated.\footnote{Eq.~\ref{eqn:noise} assumes Gaussian fluctuations for $C_l^{yy}$. 
+This is not valid at $z\sim 0$, when a single nearby large cluster can dominate large angular scales. 
+However, since the signal is already extremely small here, and this 
+problem does not affect $z > 0$, we neglect it here.}
+If we remove all information at redshifts $z < 0.3$,
 possible by explicitly detecting resolved clusters and masking
 them from the tSZ map, then the noise can be considerably
 reduced.  In this case, the smallest detectable value becomes
-$\sigma_\epsilon \simeq 0.9$, which, if achieved, would
+$\sigma_\epsilon \simeq 0.6$, which, if achieved, would
 provide some valuable information on the redshift distribution
-of tSZ fluctuations.
+of tSZ fluctuations, constraining the formation of massive clusters 
+to the era of dark energy dominance.
+
+We also considered the profile of Ref.~\cite{Komatsu:2002wc}, 
+which produces a larger tSZ signal and thus a larger cross-correlation. 
+However, since the 1-halo tSZ term dominates the noise, this actually 
+slightly decreased the sensitivity. Thus our results should be largely
+insensitive to the electron pressure profile used.
 
 \section{Primordial Non-Gaussianity}
 \label{sec:ng}
@@ -815,6 +842,43 @@ the John Templeton Foundation, and the Simons Foundation.
   %%CITATION = %doi:10.1051/0004-6361/201525787;%%
   %7 citations counted in INSPIRE as of 15 Apr 2016
 
+%\cite{Itoh:1997ks}
+\bibitem{Itoh:1997ks} 
+  N.~Itoh, Y.~Kohyama and S.~Nozawa,
+  %``Relativistic Corrections to the Sunyaev-Zel'dovich Effect for Clusters of Galaxies,''
+  Astrophys.\ J.\  {\bf 502}, 7 (1998)
+  doi:10.1086/305876
+  [astro-ph/9712289].
+  %%CITATION = doi:10.1086/305876;%%
+  %173 citations counted in INSPIRE as of 15 Jun 2016
+
+%\cite{Nagai:2007mt}
+\bibitem{Nagai:2007mt} 
+  D.~Nagai, A.~V.~Kravtsov and A.~Vikhlinin,
+  %``Effects of Galaxy Formation on Thermodynamics of the Intracluster Medium,''
+  Astrophys.\ J.\  {\bf 668}, 1 (2007)
+  doi:10.1086/521328
+  [astro-ph/0703661].
+  %%CITATION = doi:10.1086/521328;%%
+  %279 citations counted in INSPIRE as of 15 Jun 2016
+
+%\cite{Arnaud:2009tt}
+\bibitem{Arnaud:2009tt} 
+  M.~Arnaud, G.~W.~Pratt, R.~Piffaretti, H.~Boehringer, J.~H.~Croston and E.~Pointecouteau,
+  %``The universal galaxy cluster pressure profile from a representative sample of nearby systems (REXCESS) and the Y_SZ-M_500 relation,''
+  Astron.\ Astrophys.\  {\bf 517}, A92 (2010)
+  doi:10.1051/0004-6361/200913416
+  [arXiv:0910.1234 [astro-ph.CO]].
+  %%CITATION = doi:10.1051/0004-6361/200913416;%%
+  %238 citations counted in INSPIRE as of 15 Jun 2016
+
+%\cite{Dolag:2015dta}
+\bibitem{Dolag:2015dta} 
+  K.~Dolag, E.~Komatsu and R.~Sunyaev,
+  %``SZ effects in the Magneticum Pathfinder Simulation: Comparison with the Planck, SPT, and ACT results,''
+  arXiv:1509.05134 [astro-ph.CO].
+  %%CITATION = ARXIV:1509.05134;%%
+  %8 citations counted in INSPIRE as of 15 Jun 2016
 
 %\cite{Komatsu:2002wc}
 \bibitem{Komatsu:2002wc} 
@@ -825,6 +889,7 @@ the John Templeton Foundation, and the Simons Foundation.
   [astro-ph/0205468].
   %%CITATION = %doi:10.1046/j.1365-8711.2002.05889.x;%%
   %265 citations counted in INSPIRE as of 15 Apr 2016
+
 
 %\cite{Tinker:2008ff}
 \bibitem{Tinker:2008ff} 
