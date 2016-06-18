@@ -444,6 +444,9 @@ def make_plots():
     plt.ylabel(r"$(l (l+1) / (2\pi) ) C_\mathrm{l}$")
     plt.savefig("ISWtsz.pdf")
     plt.clf()
+    print("ISW: l=10: ",cmboutputscale * ttisw.crosscorr(10, ttisw.isw_window_function_limber)," l=100: ",cmboutputscale * ttisw.crosscorr(100, ttisw.isw_window_function_limber))
+    print("tSZ 2h: l=10: ",cmboutputscale * ttisw.crosscorr(10, ttisw.tsz_2h_window_function_limber)," l=100: ",cmboutputscale * ttisw.crosscorr(100, ttisw.tsz_2h_window_function_limber))
+    print("tSZ 1h: l=10: ",cmboutputscale * ttisw.tsz_1h_limber(10)," l=100: ",cmboutputscale * ttisw.tsz_1h_limber(100))
     print("Done ISW tSZ")
     #Plot redshift dependence
     aaa = np.linspace(0.5, 0.99, 80)
