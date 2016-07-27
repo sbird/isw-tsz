@@ -635,25 +635,59 @@ fluctuations was noise-limited.  Here we re-do those estimates
 taking into account the late-time $yT$ correlation calculated
 above.
 
-The signal-to-noise with which an early-Universe
-$yT$ signal with power spectrum $C_l^{yT,{\rm ng}}$ can be
-distinguished from the null hypothesis is
+If the late-time $yT$ is somehow known precisely, the
+signal-to-noise with which an early-Universe $yT$ signal with
+power spectrum $C_l^{yT,{\rm ng}}$ can be distinguished from the
+null hypothesis is
 \begin{equation}
      \left(\frac{S}{N} \right) = \left(\sum_l\frac{\left(C_l^{yT,{\rm ng}}
      \right)^2}{(\sigma_l^{yT})^2}\right)^{1/2}.
 \label{eqn:SN}
 \end{equation}
 Using Eq.~(\ref{eqn:noiseapprox}) and the numerical results for
-$C_l^{yy}$, we infer a signal-to-noise $(S/N) \simeq  (f_{\rm
+$C_l^{yy}$, we then obtain a signal-to-noise $(S/N) \simeq  (f_{\rm
 nl}^y/1.5\times 10^4) (\VEV{y}/4\times 10^{-9})$.  We thus see
 that the late-time contribution to Compton-$y$ fluctuations
 degrades the detectability $f_{\rm nl}^y$ by almost two orders
 of magnitude relative to what was estimated in
-Ref.~\cite{Emami:2015xqa}.  The detectabilty is, moreover,
-limited by cosmic variance and not from measurment noise.
+Ref.~\cite{Emami:2015xqa}, even if the late-time $yT$
+correlation is known precisely.  The detectability is, moreover,
+limited by cosmic variance and not from measurement noise.
 The summand in Fig.~\ref{fig:power} is dominated by $l\lesssim
 10$, and so the conclusion does not depend on the assumed
 angular resolution.
+
+This, however, overestimates the smallest detectable
+signal, as there is a theoretical uncertainty in the late-time
+$yT$ correlation, as discussed in Section \ref{sec:sz}; it must
+instead be determined from the data.  There is thus an
+additional uncertainty to the inferred value of $f_{\rm nl}^y$
+that will arise after marginalizing over the uncertain late-time
+$yT$ amplitude.  We thus assume that the total $yT$ power
+spectrum is a combination $C_l^{yT,{\rm tot}} = C_l^{yT}+
+C_l^{yT,{\rm ng}}$ of the late-time and non-gaussian
+contributions.  We then calculate the Fisher matrix
+\cite{Jungman:1995bz},
+\begin{equation}
+     F_{ij} = \sum_\ell \frac{\left( \partial C_l^{yT,{\rm
+     tot}}/\partial s_i \right) \left( \partial C_l^{yT,{\rm tot}}/\partial
+     s_j\right)}{\left(\sigma_l^{yT} \right)^2},
+\label{eqn:fisher}
+\end{equation}
+where $\mathbf{s} = \{f_{\rm nl}^y,\epsilon\}$ is the set of
+parameters to be determined from the data (and $\epsilon$ is the
+redshift-history parameter from Section \ref{sec:sz}), and the
+partial derivatives are evaluated under the null hypothesis
+$f_{\rm nl}=0$.  The noise with which $f_{\rm nl}$ can be
+determined, after marginalizing over $\epsilon$ is then
+$\left[\left(F^{-1} \right)_{f_{\rm nl}^y f_{\rm nl}^y}
+\right]^{1/2}$ and the signal-to-noise $(S/N)$ is $f_{\rm nl}^y$
+divided by this quantity.  Numerically, we find $(S/N) \simeq
+(f_{\rm nl}^y/????)( \VEV{y} / 4\times 10^{-9})$.  Thus, the
+marginalization over $\epsilon$ decreases the detectability by
+an additional factor of ????.
+
+
 
 \section{Conclusion}
 \label{sec:concl}
@@ -911,180 +945,16 @@ the John Templeton Foundation, and the Simons Foundation.
   %%CITATION = %doi:10.1046/j.1365-8711.1999.02692.x;%%
   %1524 citations counted in INSPIRE as of 15 Apr 2016
 
+%\cite{Jungman:1995bz}
+\bibitem{Jungman:1995bz} 
+  G.~Jungman, M.~Kamionkowski, A.~Kosowsky and D.~N.~Spergel,
+  %``Cosmological parameter determination with microwave background maps,''
+  Phys.\ Rev.\ D {\bf 54}, 1332 (1996)
+  doi:10.1103/PhysRevD.54.1332
+  [astro-ph/9512139].
+  %%CITATION = doi:10.1103/PhysRevD.54.1332;%%
+  %408 citations counted in INSPIRE as of 12 Jul 2016
 
 \end{thebibliography}
 
 \end{document}
-
-% %\cite{Bryan:1997dn}
-% \bibitem{Bryan:1997dn} 
-%   G.~L.~Bryan and M.~L.~Norman,
-%   %``Statistical properties of x-ray clusters: Analytic and numerical comparisons,''
-%   Astrophys.\ J.\  {\bf 495}, 80 (1998)
-%   %doi:10.1086/305262
-%   [astro-ph/9710107].
-%   %%CITATION = %doi:10.1086/305262;%%
-%   %1033 citations counted in INSPIRE as of 15 Apr 2016
-% 
-% 
-% %\cite{Mo:1995cs}
-% \bibitem{Mo:1995cs} 
-%   H.~J.~Mo and S.~D.~M.~White,
-%   %``An Analytic model for the spatial clustering of dark matter halos,''
-%   Mon.\ Not.\ Roy.\ Astron.\ Soc.\  {\bf 282}, 347 (1996)
-%   %doi:10.1093/mnras/282.2.347
-%   [astro-ph/9512127].
-%   %%CITATION = %doi:10.1093/mnras/282.2.347;%%
-%   %927 citations counted in INSPIRE as of 15 Apr 2016
-% 
-% 
-% % 
-% %      
-% 
-% 
-% where $\delta({\vec k},z)$ is the first-order fractional density
-% perturbation for wavevector $\vec k$, $z$ is the redshift,
-% $\Omega_m$ the matter density in units of the critical density,
-% $H_0$ the present-day Hubble parameter, and $a(z)$ the scale
-% factor (normalized to unity today).  The time (i.e., redshift)
-% dependence of the density perturbation is $\vec k$ independent
-% and is $\delta({\vec k},z) = D(z)\delta(\vec k,z=0)$.
-% By plugging the inverse Fourier transform of
-% Eq.~(\ref{eqn:phik}) into Eq.~(\ref{eqn:isw}) and changing the
-% integration variable from conformal time to redshift, we obtain,
-% \begin{eqnarray}
-%      \frac{\Delta
-%      T}{T}(\hat{n})&=&-\frac{3H_0^2}{c^3}\Omega_m\int_{0}^{r_{\text{max}}}\,
-%      dr\, H(z)\frac{d}{dz}\left(\frac{D(z)}{a(z)}\right)
-%      \nonumber \\
-%      & & \times \int \frac{d^3k}{(2\pi)^3}
-%      e^{-i \vec{k}\cdot\vec{r}}\frac{\delta(\vec k,0)}{k^2},
-% \label{eqn:iswcomplete}
-% \end{eqnarray}
-% where $r_{\text{max}} = c a(0) (\eta_0 - \eta_r)= c(\eta_0 -
-% \eta_r)$.  The redshift $z$ in Eq.~(\ref{eqn:iswcomplete}) is
-% related to the distance $r$ by integrating $(dz/dr)= - H(z)/c$,
-% where $H(z)= H_0 E(z) = H_0 \left[\Omega_m (1+z)^3 +(1-\Omega_m)
-% \right]^{1/2}$ is the Hubble parameter at redshift $z$ (and here
-% we assumed the dark energy to be a cosmological constant).
-% 
-% Using the plane-wave expansion  and the addition theorem
-% for spherical harmonics, we find the spherical-harmonic
-% coefficients for Eq.~(\ref{eqn:iswcomplete}) to be,
-% \begin{align}
-%      a_{lm}^{\text{isw}} &=
-%      4\pi(-i)^l\int
-%      \frac{d^3k}{(2\pi)^3}Y^*_{lm}(\hat{k})
-%      \Delta_l^{\text{ISW}}(k)\delta(\vec k,0),
-% \label{eqn:almisw}
-% \end{align}
-% where
-% \begin{align}
-%      \Delta_l^{\text{isw}}(k) &\equiv
-%      -\frac{3H_0^2}{c^3}\Omega_m\int_{0}^{r_{\text{max}}}\,dr\,
-%      H(z)\frac{d}{dz}\left(\frac{D(z)}{a(z)}\right)\frac{j_l(k
-%      r)}{k^2}.
-% \end{align}
-% 
-% 
-% 
-% 
-% 
-% 
-% 
-% 
-% 
-% 
-% before. In order to calculate the pressure $P_e(\vec x)=n_e(r_p)k_B
-% T_e(r_p)$, we write Eq.~(\ref{eqn:yparameter}) as a sum over the
-% pressure profiles of galaxy clusters that cross the line of
-% sight; i.e., \mk{Check this equation!}
-% \begin{equation}
-%      P_e(\vec x)  = \sum_{i} \frac{m_e c^2}{
-%      \sigma_T}y_{3D}\left( | \vec x -\vec w_i| \right),
-% \end{equation}
-% where $y_{3D}(w)$ is the weighted radial
-% pressure profile from Eq.~(7) in Ref.~\cite{Komatsu:2002wc}, and
-% $\vec w_i$ is the position of the center of cluster $i$.
-% We assume all clusters have the same profile and so replace $w$ with
-% $\vec{r}_p-\vec{w}_n$, where $\vec{w}_n$ is the position of the
-% center of the $n^{\text{th}}$ dark-matter halo.  We also swap
-% the sum over $\Delta n$, which is equal to unity, for an
-% integral over $dn$ and introduce the galaxy-cluster mass
-% function [Eq.~(10) in Ref.~\cite{Sheth:1999mn}] $\frac{dn}{dM
-% dV}(M,z,\vec{w}_p)$. The $z$ appearing in the argument of our
-% functions are all related to $r_p$. Through this process we have
-% also gone from the discrete line-of-sight variable $\vec{w}_n$
-% to the continuous $\vec{w}_p$.   Now due to the presence of
-% $\vec{r}_p - \vec{w}_p$ in the pressure profile, we replace the
-% spatial cluster mass function and pressure profile with their
-% expressions in the physical Fourier domain, as convolution in
-% the spatial domain is multiplication in the Fourier domain. This
-% leads to the following expression for the temperature
-% flunctuations:
-% \begin{align}
-%      \frac{\Delta T}{g(\nu)T_{\text{CMB}}}&(\hat{n}) = \int
-%      \frac{dr_p dM(a(z))^{-3}d^3k_c}{(2\pi)^3}
-%      e^{-i\vec{k_c}\cdot\vec{r}_c} \nonumber \\
-%      &
-%      \times\frac{dn}{dMdV}(M,z)b(M,z)D(z)\delta_{k_p}(0)
-%      \nonumber \\
-%      &  \times \widetilde{y}_{3D}\left(\frac{k_c}{a(z)},M,z\right).
-%      \nonumber 
-% \end{align}
-% The expression for the Fourier transform of the radial profile
-% is
-% \begin{align}
-%      \widetilde{y}_{3D}(\vec{k}_p,M,z) &= 4\pi
-%      \int_{0}^{r_v(M,z)}dr_p\ y(r_p,M,z)j_0(\vec{k}_p\cdot
-%      \vec{r}_p)r_p^2.
-% \end{align}
-% We cut off at the virial radius, 
-% \begin{equation}
-%      r_v(M,z) = \sqrt[3]{\frac{3M}{4\pi \Delta_c(z) \rho_c(z)}},
-% \end{equation}
-% with the spherical overdensity, $\Delta_{c} (z)$, from Eq.~(6)
-% in Ref.~\cite{Bryan:1997dn} and the critical overdensity
-% $\rho_c(z)$ at redshift $z$.
-% 
-% The Fourier transform of the cluster mass function is
-% \begin{eqnarray}
-%      \frac{dn}{dM}(M,z,\vec{k}_p) &\simeq&
-%      \frac{dn}{dMdV}(M,z)\delta_{k_p}(z)b(M,z) \nonumber \\
-%      & & + (2\pi)^3 \frac{dn_{d}}{dMdV}(M,z) \delta_{D}^{(3)}
-%      (\vec{k}_p),
-% \end{eqnarray}
-% where $b(M,z)$ is the bias from Ref.~\cite{Mo:1995cs}.  The
-% first term in this expression accounts for the 2-halo
-% contribution to the x-ray-gas correlation---i.e., the
-% correlation that arises between two different galaxies.  The
-% second term is the one-halo contribution which accounts for
-% x-ray-gas correlations that arise from gas in the same halo.
-% 
-% For the 2-halo case term,, we change to comoving coordinates,
-% noting that  $\delta_{k_p}(z) = a^3(z)\delta_{k_c}(z)$, and then
-% find from the projection of the plane wave onto spherical
-% harmonics the spherical-harmonic coefficients,
-% \begin{equation}
-%      a_{lm}^{y,2h} = 4\pi(-i)^l\int
-%      \frac{d^3k_c}{(2\pi)^3}Y^{*}_{lm}(\hat{k}_c)
-%      \Delta_l^{y,2h}(k_c)\delta_{k_c}(0),
-% \end{equation}
-% where
-% \begin{eqnarray}
-%      \Delta_l^{y,2h}(k_c) &\equiv& \int dr dM
-%      \frac{a(z)dn}{dMdV}(M,z)b(M,z) D(z) \nonumber \\
-%   & &   \times
-%   \widetilde{y}_{3D}\left(\vec{k}_p,M,z\right)j_l(k_c r).
-% \end{eqnarray}
-% The 1-halo contribution is derived differently since there
-% is no plane wave with which to expand.  Instead, we can use the
-% Limber approximation in the Fourier transform of the gas
-% profile, that $k_p \approx \frac{l+\frac{1}{2}}{a(z)r (z)}$, in
-% order to pull it out of the integral over $d^3k_p$ so as to obtain
-% \begin{eqnarray}
-%      a_{lm}^{y,1h} &= &\int d^3 r_p dM \frac{Y^{*}_{lm}(\hat{n})}
-%      {r_p^2} \frac{dn_{d}}{dMdV}(M,z) \nonumber \\
-%    & & \times
-%    \widetilde{y}_{3D}\left(\frac{l+\frac{1}{2}}{a(z)r_c(z)},M,z\right) 
-% \end{eqnarray}
