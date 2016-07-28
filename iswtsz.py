@@ -417,13 +417,27 @@ class TSZHalo(object):
             raise RuntimeError("Err in C_l computation: ",err)
         return (ll*(ll+1))/(2*math.pi)*cll
 
+    def dClyTng(self, ll):
+        """
+        The derivative of l*(l+1)*C_l^nG by f_NL.
+        l^2 C_l^nG ~ 5.8e-15 (f_nL/200) (<y>/4e-9)
+        """
+        return 5.8e-15 / 200.*np.ones_like(ll)
+
+def Fisher_fnl(ClyT, Clng, sigmayT2):
+    """Compute the inverse Fisher matrix for fNL, given the C_ls.
+    This is 1/(F^{-1}_{fnl fnl})^{1/2}, the term which appears in the S/N."""
+    ClyTsum = np.sum(ClyT**2/sigmayT2)
+    return np.sqrt((ClyTsum*np.sum(Clng**2/sigmayT2) - np.sum(Clng*ClyT/sigmayT2))/ClyTsum)
+
 def make_plots():
     """Plot the fake data for the ISW and tSZ effects"""
     maxl = 400
     #This is the default unit of CAMB and puts the Cls
     #into microKelvin squared. ( 2.726 * 10^6 )^2
     cmboutputscale = 7.4311e12
-    ll = np.concatenate([np.arange(2,10,1),np.arange(10,40,2),np.arange(40,100,10),np.arange(100,maxl,25)])
+    #For what follows we need all l modes!
+    ll = np.arange(2,maxl)
     ttisw = TSZHalo()
     tsz1h =  cmboutputscale * np.array([ttisw.tsz_1h_limber(l) for l in ll])
     tsztsz = cmboutputscale * np.array([ttisw.crosscorr(l, ttisw.tsz_2h_window_function_limber) for l in ll])
@@ -498,12 +512,12 @@ def make_plots():
     plt.legend(loc=0)
     plt.xlabel("$l$")
     plt.ylabel(r"$(l (l+1) / (2\pi) ) C_\mathrm{l}$")
+    plt.xlim(2,maxl)
     plt.savefig("Clbyeps.pdf")
     plt.clf()
-    np.savetxt("Clbyeps.txt",Clbyeps)
-    np.savetxt("Clbyeps03.txt",Clbyeps03)
     print("sigma = ",np.sqrt(1./np.sum(Clbyeps**2/noise))," z_0 = ",z0)
     print("sigma z>0.3 = ",np.sqrt(1./np.sum(Clbyeps03**2/noise03))," z_0 = ",z0)
+    print("S/N for fNL = ",Fisher_fnl(iswtsz, ttisw.dClyTng(ll),noise))
 
 if __name__ == "__main__":
     #Planck 2015 error on sigma_8
