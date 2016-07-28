@@ -428,7 +428,7 @@ def Fisher_fnl(ClyT, Clng, sigmayT2):
     """Compute the inverse Fisher matrix for fNL, given the C_ls.
     This is 1/(F^{-1}_{fnl fnl})^{1/2}, the term which appears in the S/N."""
     ClyTsum = np.sum(ClyT**2/sigmayT2)
-    return np.sqrt((ClyTsum*np.sum(Clng**2/sigmayT2) - np.sum(Clng*ClyT/sigmayT2))/ClyTsum)
+    return np.sqrt((ClyTsum*np.sum(Clng**2/sigmayT2) - np.sum((Clng*ClyT/sigmayT2)**2))/ClyTsum)
 
 def make_plots():
     """Plot the fake data for the ISW and tSZ effects"""
@@ -513,6 +513,7 @@ def make_plots():
     plt.xlabel("$l$")
     plt.ylabel(r"$(l (l+1) / (2\pi) ) C_\mathrm{l}$")
     plt.xlim(2,maxl)
+    plt.ylim(ymin=5e-7)
     plt.savefig("Clbyeps.pdf")
     plt.clf()
     print("sigma = ",np.sqrt(1./np.sum(Clbyeps**2/noise))," z_0 = ",z0)
