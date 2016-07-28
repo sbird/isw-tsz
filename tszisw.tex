@@ -569,9 +569,9 @@ is at low redshifts, the 1-halo tSZ term, which appears as noise
 in Eq.~(\ref{eqn:noise}), peaks even more strongly at low
 redshift. Thus the lowest-redshift bins are substantially noise
 dominated.\footnote{Eq.~\ref{eqn:noise} assumes Gaussian fluctuations for $C_l^{yy}$. 
-This is not valid at $z\sim 0$, when a single nearby large cluster can dominate large angular scales. 
-However, since the signal is already extremely small here, and this 
-problem does not affect $z > 0$, we neglect it here.}
+This assumption is invalid at $z\sim 0$, where a single nearby large 
+cluster can dominate large angular scales. The $z\sim 0$ signal is 
+already extremely small, however, so this does not change our conclusions.}
 If we remove all information at redshifts $z < 0.3$,
 possible by explicitly detecting resolved clusters and masking
 them from the tSZ map, then the noise can be considerably
@@ -664,9 +664,11 @@ instead be determined from the data.  There is thus an
 additional uncertainty to the inferred value of $f_{\rm nl}^y$
 that will arise after marginalizing over the uncertain late-time
 $yT$ amplitude.  We thus assume that the total $yT$ power
-spectrum is a combination $C_l^{yT,{\rm tot}} = C_l^{yT}+
+spectrum is a combination $C_l^{yT,{\rm tot}} = \alpha C_l^{yT}+
 C_l^{yT,{\rm ng}}$ of the late-time and non-gaussian
-contributions.  We then calculate the Fisher matrix
+contributions.  Here $\alpha \sim 1$ accounts for uncertainty in
+the amplitude of $yT$.
+We then calculate the Fisher matrix
 \cite{Jungman:1995bz},
 \begin{equation}
      F_{ij} = \sum_\ell \frac{\left( \partial C_l^{yT,{\rm
@@ -674,19 +676,17 @@ contributions.  We then calculate the Fisher matrix
      s_j\right)}{\left(\sigma_l^{yT} \right)^2},
 \label{eqn:fisher}
 \end{equation}
-where $\mathbf{s} = \{f_{\rm nl}^y,\epsilon\}$ is the set of
-parameters to be determined from the data (and $\epsilon$ is the
-redshift-history parameter from Section \ref{sec:sz}), and the
+where $\mathbf{s} = \{f_{\rm nl}^y,\alpha\}$ is the set of
+parameters to be determined from the data, and the
 partial derivatives are evaluated under the null hypothesis
-$f_{\rm nl}=0$.  The noise with which $f_{\rm nl}$ can be
-determined, after marginalizing over $\epsilon$ is then
+$f_{\rm nl}=0$ and $\alpha = 1$.  The noise with which $f_{\rm nl}$ can be
+determined, after marginalizing over $\alpha$, is then
 $\left[\left(F^{-1} \right)_{f_{\rm nl}^y f_{\rm nl}^y}
 \right]^{1/2}$ and the signal-to-noise $(S/N)$ is $f_{\rm nl}^y$
 divided by this quantity.  Numerically, we find $(S/N) \simeq
 (f_{\rm nl}^y/????)( \VEV{y} / 4\times 10^{-9})$.  Thus, the
 marginalization over $\epsilon$ decreases the detectability by
 an additional factor of ????.
-
 
 
 \section{Conclusion}
