@@ -417,12 +417,13 @@ class TSZHalo(object):
             raise RuntimeError("Err in C_l computation: ",err)
         return (ll*(ll+1))/(2*math.pi)*cll
 
-    def dClyTng(self, ll):
-        """
-        The derivative of l*(l+1)*C_l^nG by f_NL.
-        l^2 C_l^nG ~ 5.8e-15 (f_nL/200) (<y>/4e-9)
-        """
-        return 5.8e-15 / 200.*np.ones_like(ll)
+def dClyTng(Ctt):
+    """
+    The derivative of l*(l+1)*C_l^nG by f_NL.
+    C_l^nG ~ 12 f_nl C_l^TT
+           ~ 12 f_NL C^TT_l 4e-9 (<y> / 4e-9)
+    """
+    return Ctt * 12 * 4e-9
 
 def Fisher_fnl(ClyT, Clng, sigmayT2):
     """Compute the inverse Fisher matrix for fNL, given the C_ls.
@@ -521,7 +522,7 @@ def make_plots():
     plt.clf()
     print("sigma = ",np.sqrt(1./np.sum(Clbyeps**2/noise))," z_0 = ",z0)
     print("sigma z>0.3 = ",np.sqrt(1./np.sum(Clbyeps03**2/noise03))," z_0 = ",z0)
-    (SNfnlindep, SNfnlmarg) = Fisher_fnl(iswtsz, cmboutputscale*ttisw.dClyTng(ll),noise)
+    (SNfnlindep, SNfnlmarg) = Fisher_fnl(iswtsz, ttisw.dClyTng(cmb(ll)),noise)
     print("S/N for fnl if independent = ",SNfnlindep)
     print("S/N for fNL = ",SNfnlmarg)
 
