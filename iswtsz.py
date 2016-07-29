@@ -522,7 +522,7 @@ def make_plots():
     plt.clf()
     print("sigma = ",np.sqrt(1./np.sum(Clbyeps**2/noise))," z_0 = ",z0)
     print("sigma z>0.3 = ",np.sqrt(1./np.sum(Clbyeps03**2/noise03))," z_0 = ",z0)
-    (SNfnlindep, SNfnlmarg) = Fisher_fnl(iswtsz, ttisw.dClyTng(cmb(ll)),noise)
+    (SNfnlindep, SNfnlmarg) = Fisher_fnl(iswtsz, dClyTng(cmb(ll)),noise)
     print("S/N for fnl if independent = ",SNfnlindep)
     print("S/N for fNL = ",SNfnlmarg)
 
