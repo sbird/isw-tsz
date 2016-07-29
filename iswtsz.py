@@ -525,6 +525,9 @@ def make_plots():
     (SNfnlindep, SNfnlmarg) = Fisher_fnl(iswtsz, dClyTng(cmb_int(ll)),noise)
     print("S/N for fnl if independent = ",SNfnlindep)
     print("S/N for fNL = ",SNfnlmarg)
+    (SNfnlindep, SNfnlmarg) = Fisher_fnl(iswtsz03, dClyTng(cmb_int(ll)),noise03)
+    print("S/N for fnl if independent for z > 0.3 = ",SNfnlindep)
+    print("S/N for fNL z > 0.3 = ",SNfnlmarg)
 
 if __name__ == "__main__":
     #Planck 2015 error on sigma_8

@@ -551,7 +551,7 @@ $N_l$ to the $yy$ measurement is already small compared with
 $C_l^{yy}$, and it will be negligible for future experiments
 like PIXIE or PRISM.  We also note from the numerical results
 that $\left(C_l^{yT}\right)^2$ is small compared with $C_l^{yy}
-C_l^{yT}$---this makes sense given that the cross-correlation of
+C_l^{TT}$---this makes sense given that the cross-correlation of
 $y$ with the ISW effect is small and further that the ISW effect
 provides only a small contribution to large-angle temperature
 fluctuations.  We may thus approximate
@@ -562,7 +562,7 @@ fluctuations.  We may thus approximate
 \end{equation}
 
 The smallest detectable value of $\epsilon$ evaluates to
-$\sigma_\epsilon \simeq 4$, for $z_0 = 0.04$. 
+$\sigma_\epsilon \simeq 3$, for $z_0 = 0.07$. 
 This is still a considerable uncertainty, but the signal to noise can be
 increased.  While the majority of the cross-correlation signal
 is at low redshifts, the 1-halo tSZ term, which appears as noise
@@ -576,7 +576,7 @@ If we remove all information at redshifts $z < 0.3$,
 possible by explicitly detecting resolved clusters and masking
 them from the tSZ map, then the noise can be considerably
 reduced.  In this case, the smallest detectable value becomes
-$\sigma_\epsilon \simeq 0.6$, which, if achieved, would
+$\sigma_\epsilon \simeq 0.5$, which, if achieved, would
 provide some valuable information on the redshift distribution
 of tSZ fluctuations, constraining the formation of massive clusters 
 to the era of dark energy dominance.
@@ -646,7 +646,7 @@ null hypothesis is
 \end{equation}
 Using Eq.~(\ref{eqn:noiseapprox}) and the numerical results for
 $C_l^{yy}$, we then obtain a signal-to-noise $(S/N) \simeq  (f_{\rm
-nl}^y/1.5\times 10^4) (\VEV{y}/4\times 10^{-9})$.  We thus see
+nl}^y/1650) (\VEV{y}/4\times 10^{-9})$.  We thus see
 that the late-time contribution to Compton-$y$ fluctuations
 degrades the detectability $f_{\rm nl}^y$ by almost two orders
 of magnitude relative to what was estimated in
@@ -684,10 +684,17 @@ determined, after marginalizing over $\alpha$, is then
 $\left[\left(F^{-1} \right)_{f_{\rm nl}^y f_{\rm nl}^y}
 \right]^{1/2}$ and the signal-to-noise $(S/N)$ is $f_{\rm nl}^y$
 divided by this quantity.  Numerically, we find $(S/N) \simeq
-(f_{\rm nl}^y/????)( \VEV{y} / 4\times 10^{-9})$.  Thus, the
-marginalization over $\epsilon$ decreases the detectability by
-an additional factor of ????.
+(f_{\rm nl}^y/1720)( \VEV{y} / 4\times 10^{-9})$.  Thus, the
+marginalization over the ISW-tSZ effect decreases the detectability by
+an additional $5\%$.
 
+Since the noise is again dominated by the tSZ 1-halo term, we can 
+perform a similar cleaning to low-redshift sources to that used 
+in Section \ref{sec:sz}. If we remove all $z<0.3$ clusters, we 
+find that we can detect a smaller value of $f_{\rm nl}$. 
+Numerically, using the Fisher matrix as above to marginalise 
+over uncertainty in the $yT$ amplitude, we find
+$(S/N) \simeq (f_{\rm nl}^y/470)( \VEV{y} / 4\times 10^{-9})$.
 
 \section{Conclusion}
 \label{sec:concl}
