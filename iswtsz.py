@@ -430,8 +430,8 @@ def Fisher_fnl(ClyT, Clng, sigmayT2):
     This is 1/(F^{-1}_{fnl fnl})^{1/2}, the term which appears in the S/N."""
     ClyTsum = np.sum(ClyT**2/sigmayT2)
     Clngsum = np.sum(Clng**2/sigmayT2)
-    marg = np.sqrt(ClyTsum/(ClyTsum*Clngsum - np.sum((Clng*ClyT/sigmayT2)**2)))
-    indep = np.sqrt(Clngsum)
+    marg = np.sqrt(ClyTsum/(ClyTsum*Clngsum - np.sum(Clng*ClyT/sigmayT2)**2))
+    indep = 1/np.sqrt(Clngsum)
     return (indep, marg)
 
 def make_plots():
@@ -522,7 +522,7 @@ def make_plots():
     plt.clf()
     print("sigma = ",np.sqrt(1./np.sum(Clbyeps**2/noise))," z_0 = ",z0)
     print("sigma z>0.3 = ",np.sqrt(1./np.sum(Clbyeps03**2/noise03))," z_0 = ",z0)
-    (SNfnlindep, SNfnlmarg) = Fisher_fnl(iswtsz, dClyTng(cmb(ll)),noise)
+    (SNfnlindep, SNfnlmarg) = Fisher_fnl(iswtsz, dClyTng(cmb_int(ll)),noise)
     print("S/N for fnl if independent = ",SNfnlindep)
     print("S/N for fNL = ",SNfnlmarg)
 
