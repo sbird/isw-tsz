@@ -348,7 +348,7 @@ class TSZHalo(object):
         rr = self.angular_diameter(aa)
         return self.light / self.lingrowth.Hofz(aa) * Tmass * rr**2
 
-    def tsz_1h_limber(self, lmode, minz=0.0038):
+    def tsz_1h_limber(self, lmode, minz=0.02):
         """The 2-halo window function for the tSZ that appears in the C_l if we use the Limber approximation.
         This gets rid of the spherical bessels."""
         (cll, err) = scipy.integrate.quad(self._tsz_1h_integrand, minz, 5., args=lmode,epsabs=1e-13)
@@ -448,7 +448,7 @@ def make_plots():
     maxl = 1000
     #This is the default unit of CAMB and puts the Cls
     #into microKelvin squared. ( 2.726 * 10^6 )^2
-    cmboutputscale = 7.4311e12
+    cmboutputscale = 1.
     #For what follows we need all l modes!
     ll = np.arange(2,maxl)
     ttisw = TSZHalo()
